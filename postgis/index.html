@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geoprocessamento com PostGIS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <script type="importmap">
+    { "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    } }
+    </script>
+
+    <style>
+        /* @MIRA:THEME:START */
+/* MIRA THEME: mira-dark (padrão)
+   Identidade clássica do canal: fundo preto, laranja vibrante,
+   glassmorphism no estilo clássico do canal. */
+:root {
+    --mira-primary: #FF904D;
+    --mira-bg: #000000;
+    --mira-text: #ffffff;
+    --mira-text-soft: rgba(255, 255, 255, 0.70);
+    --mira-text-softer: rgba(255, 255, 255, 0.50);
+    --mira-card-bg: rgba(255, 255, 255, 0.05);
+    --mira-card-border: rgba(255, 255, 255, 0.10);
+    --mira-glow-soft: rgba(255, 144, 77, 0.15);
+    --mira-glow-strong: rgba(255, 144, 77, 0.25);
+    --mira-icon-bg: rgba(255, 144, 77, 0.15);
+    --mira-icon-border: rgba(255, 144, 77, 0.30);
+    --mira-pill-bg: rgba(255, 255, 255, 0.04);
+    --mira-pill-border: rgba(255, 255, 255, 0.08);
+    --mira-stage-glow: rgba(255, 144, 77, 0.06);
+    --mira-accent-2: #FFC766;
+}
+
+
+/* ============================================================
+   MIRA — base.css
+   Estrutura compartilhada por todos os temas.
+   Os temas definem apenas as CSS variables (--mira-*).
+   ============================================================ */
+
+body {
+    background: var(--mira-bg);
+    min-height: 100vh;
+    color: var(--mira-text);
+    font-family: 'Inter', sans-serif;
+}
+
+.primary-color { color: var(--mira-primary); }
+.primary-bg { background: var(--mira-primary); }
+
+.glass-card {
+    background: var(--mira-card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--mira-card-border);
+    box-shadow: 0 10px 30px var(--mira-glow-soft);
+    transition: all 0.3s ease;
+    border-radius: 0.75rem;
+}
+
+.glass-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px var(--mira-glow-strong);
+}
+
+.icon-hero {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    background: var(--mira-icon-bg);
+    border: 1px solid var(--mira-icon-border);
+}
+
+.attribute-pill {
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    transition: all 0.25s ease;
+    border-radius: 9999px;
+}
+
+.attribute-pill:hover {
+    background: var(--mira-icon-bg);
+    border-color: var(--mira-icon-border);
+    transform: translateY(-3px);
+}
+
+/* Palco de animação D3 */
+.anim-stage {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: radial-gradient(circle at 50% 50%, var(--mira-stage-glow), transparent 70%);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.anim-stage svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.replay-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    color: var(--mira-text-soft);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.replay-btn:hover {
+    background: var(--mira-icon-bg);
+    color: var(--mira-primary);
+}
+
+.text-soft { color: var(--mira-text-soft); }
+.text-softer { color: var(--mira-text-softer); }
+
+@keyframes mira-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+@keyframes mira-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes mira-gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+        /* @MIRA:THEME:END */
+
+        /* === CONTROLES DE SLIDE (passagem card-a-card) === */
+        html { scroll-behavior: smooth; }
+
+        #mira-progress {
+            position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+            background: linear-gradient(90deg, var(--mira-primary), var(--mira-accent-2), var(--mira-primary));
+            background-size: 200% 100%;
+            animation: mira-shimmer 2s linear infinite;
+            z-index: 9999; transition: width 0.1s linear;
+            box-shadow: 0 0 10px var(--mira-glow-strong);
+        }
+
+        @keyframes mira-shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+
+        #mira-next {
+            position: fixed; bottom: 32px; right: 32px;
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--mira-primary); color: var(--mira-bg);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: none;
+            opacity: 0; transform: translateY(20px);
+            transition: all 0.3s ease; z-index: 9998;
+            box-shadow: 0 4px 20px var(--mira-glow-strong);
+        }
+        #mira-next.visible { opacity: 1; transform: translateY(0); }
+        #mira-next:hover { transform: translateY(-3px) scale(1.1); }
+
+        /* === Palco 3D (WebGL) === */
+        .canvas3d {
+            width: 100%;
+            height: 68vh;
+            min-height: 430px;
+            border-radius: 10px;
+            background: radial-gradient(circle at 50% 45%, var(--mira-stage-glow), transparent 70%);
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
+        }
+        .canvas3d:active { cursor: grabbing; }
+        .canvas3d canvas { display: block; }
+
+        /* === Bloco de código SQL === */
+        .code-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--mira-card-border);
+            border-radius: 0.75rem;
+            overflow: auto;
+        }
+        .code-card pre {
+            margin: 0;
+            padding: 1.4rem 1.6rem;
+            font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+            font-size: 0.92rem;
+            line-height: 1.65;
+            color: #d7e0ea;
+            white-space: pre;
+        }
+        .code-card .cm { color: rgba(255, 255, 255, 0.40); }
+        .code-card .kw { color: var(--mira-primary); font-weight: 600; }
+        .code-card .fn { color: var(--mira-accent-2); }
+        .code-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Controles de slide: barra de progresso + botão flutuante "próximo" -->
+    <div id="mira-progress"></div>
+    <button id="mira-next" aria-label="Próximo slide">
+        <i data-lucide="chevron-down" class="w-6 h-6" id="mira-next-icon"></i>
+    </button>
+
+    <!-- ============ 1. CAPA (3D: globo de pontos) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-10">
+        <div id="p1-wrap" class="canvas3d absolute inset-0" style="height:100%;border-radius:0;opacity:0.55;"></div>
+        <div class="relative z-10 text-center max-w-4xl pointer-events-none" data-aos="fade-up">
+            <p class="attribute-pill inline-block px-5 py-2 text-sm tracking-widest uppercase text-soft mb-8">Curso de Geoprocessamento</p>
+            <h1 class="text-6xl md:text-7xl font-black leading-tight mb-6">
+                Geoprocessamento<br>
+                <span class="primary-color">com PostGIS</span>
+            </h1>
+            <p class="text-xl text-soft max-w-2xl mx-auto mb-10">Do shapefile ao banco espacial, do mapa à decisão. Banco de dados geográfico, SQL espacial e inteligência territorial.</p>
+            <div class="flex items-center justify-center gap-3 text-softer text-sm">
+                <i data-lucide="user" class="w-4 h-4 primary-color"></i> Valdecir Neumann
+                <span class="opacity-40">|</span>
+                <i data-lucide="clock" class="w-4 h-4 primary-color"></i> Carga horária: 8h
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 2. A JORNADA (padrão) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-12" data-aos="fade-up">
+            <h2 class="text-5xl font-black">A jornada do curso</h2>
+            <p class="text-soft text-lg mt-3">Dois encontros, um salto conceitual</p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-8 w-full max-w-5xl items-stretch">
+            <div class="glass-card p-10" data-aos="fade-right">
+                <div class="icon-hero mb-6"><i data-lucide="database" class="primary-color w-6 h-6"></i></div>
+                <p class="text-softer text-sm uppercase tracking-widest mb-2">Dia 1</p>
+                <h3 class="text-3xl font-bold mb-4">De arquivo para banco</h3>
+                <ul class="space-y-3 text-soft">
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Limites do shapefile</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> PostgreSQL, PostGIS e pgAdmin</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> SQL espacial e índice GiST</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> QGIS conectado ao banco</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Publicação web com serviços OGC</li>
+                </ul>
+            </div>
+            <div class="glass-card p-10" data-aos="fade-left">
+                <div class="icon-hero mb-6"><i data-lucide="lightbulb" class="primary-color w-6 h-6"></i></div>
+                <p class="text-softer text-sm uppercase tracking-widest mb-2">Dia 2</p>
+                <h3 class="text-3xl font-bold mb-4">De mapa para decisão</h3>
+                <ul class="space-y-3 text-soft">
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> O que é inteligência geográfica</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Fontes públicas: IBGE, INDE, DATASUS</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Técnicas analíticas de território</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Oferta versus demanda</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Ética e LGPD</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 3. POR QUE SAIR DO SHAPEFILE (padrão) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-12" data-aos="fade-up">
+            <h2 class="text-5xl font-black">Por que sair do <span class="primary-color">shapefile</span></h2>
+            <p class="text-soft text-lg mt-3">O shapefile é formato de troca, não de operação</p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-8 w-full max-w-5xl items-stretch">
+            <div id="versus-a" class="glass-card p-10 transition-all duration-700" data-aos="fade-right">
+                <div class="icon-hero mb-6"><i data-lucide="file" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-3xl font-bold mb-4">Shapefile</h3>
+                <ul class="space-y-3 text-soft">
+                    <li class="flex gap-3"><i data-lucide="x" class="w-5 h-5 shrink-0" style="color:var(--mira-text-softer)"></i> Limite de 2 GB por arquivo</li>
+                    <li class="flex gap-3"><i data-lucide="x" class="w-5 h-5 shrink-0" style="color:var(--mira-text-softer)"></i> Nomes de campo com 10 caracteres</li>
+                    <li class="flex gap-3"><i data-lucide="x" class="w-5 h-5 shrink-0" style="color:var(--mira-text-softer)"></i> Um único tipo de geometria</li>
+                    <li class="flex gap-3"><i data-lucide="x" class="w-5 h-5 shrink-0" style="color:var(--mira-text-softer)"></i> Sem concorrência nem integridade</li>
+                </ul>
+            </div>
+            <div id="versus-b" class="glass-card p-10 transition-all duration-700" data-aos="fade-left">
+                <div class="icon-hero mb-6"><i data-lucide="database" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-3xl font-bold mb-4">Banco espacial</h3>
+                <ul class="space-y-3 text-soft">
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Multiusuário com controle de concorrência (ACID)</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Restrições de integridade</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> SQL como linguagem de análise</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Processamento no servidor e base para a web</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 4. O QUE É O POSTGIS (3D: orbital) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">O que é o PostGIS</h2>
+            <p class="text-soft text-base mt-2">Extensão espacial do PostgreSQL, padrão OGC Simple Features</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p4-wrap" class="canvas3d"></div>
+        </div>
+    </section>
+
+    <!-- ============ 5. TIPOS DE GEOMETRIA (3D: primitivas) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Tipos de geometria</h2>
+            <p class="text-soft text-base mt-2">Point, LineString, Polygon e as variantes Multi</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p5-wrap" class="canvas3d"></div>
+        </div>
+    </section>
+
+    <!-- ============ 6. SRID (3D: globo + plano) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Sistemas de coordenadas</h2>
+            <p class="text-soft text-base mt-2">SRID 4674 para armazenar, 31982 para medir em metros</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p6-wrap" class="canvas3d"></div>
+        </div>
+    </section>
+
+    <!-- ============ 7. HABILITAR O POSTGIS (padrão: código) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <h2 class="text-5xl font-black">Habilitar o PostGIS</h2>
+            <p class="text-soft text-lg mt-3">Uma extensão liga o espacial no PostgreSQL</p>
+        </div>
+        <div class="w-full max-w-4xl" data-aos="fade-up">
+            <p class="code-label text-softer mb-2">pgAdmin · SQL</p>
+            <div class="code-card"><pre><span class="cm">-- Habilitar a extensão espacial</span>
+<span class="kw">CREATE EXTENSION IF NOT EXISTS</span> postgis;
+
+<span class="cm">-- Conferir a instalação</span>
+<span class="kw">SELECT</span> <span class="fn">PostGIS_Full_Version</span>();
+
+<span class="cm">-- Representar uma geometria em texto (WKT), SRID 4674</span>
+<span class="kw">SELECT</span> <span class="fn">ST_GeomFromText</span>(<span class="fn">'POINT(-53.7430 -24.7136)'</span>, 4674);</pre></div>
+            <p class="text-softer mt-6 text-center max-w-2xl mx-auto">WKT e WKB são os formatos de representação da geometria. O SRID identifica o sistema de coordenadas de cada objeto.</p>
+        </div>
+    </section>
+
+    <!-- ============ 8. LEVAR DADOS PARA O BANCO (padrão) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-12" data-aos="fade-up">
+            <h2 class="text-5xl font-black">Levar os dados para o banco</h2>
+            <p class="text-soft text-lg mt-3">Três caminhos para importar uma camada</p>
+        </div>
+        <div class="grid md:grid-cols-3 gap-6 w-full max-w-5xl items-stretch">
+            <div class="glass-card p-8" data-aos="fade-up" data-aos-delay="0">
+                <div class="icon-hero mb-5"><i data-lucide="mouse-pointer-click" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-3">DB Manager</h3>
+                <p class="text-soft">Pela interface do QGIS, importar camada sem linha de comando. O caminho mais direto para a turma.</p>
+            </div>
+            <div class="glass-card p-8" data-aos="fade-up" data-aos-delay="100">
+                <div class="icon-hero mb-5"><i data-lucide="terminal" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-3">shp2pgsql</h3>
+                <p class="text-soft">Conversor oficial do PostGIS: transforma o shapefile em instruções SQL prontas para carga.</p>
+            </div>
+            <div class="glass-card p-8" data-aos="fade-up" data-aos-delay="200">
+                <div class="icon-hero mb-5"><i data-lucide="shuffle" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-3">ogr2ogr</h3>
+                <p class="text-soft">O canivete da GDAL: lê dezenas de formatos e grava direto no PostGIS.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 9. TABELA ESPACIAL (padrão: código) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <h2 class="text-5xl font-black">Tabela espacial</h2>
+            <p class="text-soft text-lg mt-3">A coluna geom guarda a geometria com seu SRID</p>
+        </div>
+        <div class="w-full max-w-4xl" data-aos="fade-up">
+            <p class="code-label text-softer mb-2">Estrutura · SIRGAS 2000 (EPSG:4674)</p>
+            <div class="code-card"><pre><span class="kw">CREATE TABLE</span> micropolo (
+    id    serial <span class="kw">PRIMARY KEY</span>,
+    nome  varchar(120) <span class="kw">NOT NULL</span>,
+    geom  <span class="fn">geometry</span>(MultiPolygon, 4674)
+);
+
+<span class="kw">CREATE TABLE</span> cmei (
+    id          serial <span class="kw">PRIMARY KEY</span>,
+    nome        varchar(120) <span class="kw">NOT NULL</span>,
+    capacidade  integer,
+    geom        <span class="fn">geometry</span>(Point, 4674)
+);</pre></div>
+        </div>
+    </section>
+
+    <!-- ============ 10. ÍNDICE GiST (3D: caixas aninhadas) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Índice espacial GiST</h2>
+            <p class="text-soft text-base mt-2">Sem índice a consulta trava, com GiST fica instantânea</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p10-wrap" class="canvas3d"></div>
+        </div>
+    </section>
+
+    <!-- ============ 11. FUNÇÕES ST_ (padrão) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-12" data-aos="fade-up">
+            <h2 class="text-5xl font-black">Funções espaciais <span class="primary-color">ST_</span></h2>
+            <p class="text-soft text-lg mt-3">O núcleo da análise, agrupado por finalidade</p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6 w-full max-w-5xl items-stretch">
+            <div class="glass-card p-8" data-aos="fade-right">
+                <div class="flex items-center gap-3 mb-4"><div class="icon-hero"><i data-lucide="ruler" class="primary-color w-5 h-5"></i></div><h3 class="text-2xl font-bold">Medição</h3></div>
+                <p class="text-soft font-mono text-sm leading-relaxed">ST_Area, ST_Length, ST_Distance, ST_Perimeter</p>
+            </div>
+            <div class="glass-card p-8" data-aos="fade-left">
+                <div class="flex items-center gap-3 mb-4"><div class="icon-hero"><i data-lucide="git-compare" class="primary-color w-5 h-5"></i></div><h3 class="text-2xl font-bold">Relação topológica</h3></div>
+                <p class="text-soft font-mono text-sm leading-relaxed">ST_Within, ST_Contains, ST_Intersects, ST_DWithin</p>
+            </div>
+            <div class="glass-card p-8" data-aos="fade-right">
+                <div class="flex items-center gap-3 mb-4"><div class="icon-hero"><i data-lucide="sparkles" class="primary-color w-5 h-5"></i></div><h3 class="text-2xl font-bold">Processamento</h3></div>
+                <p class="text-soft font-mono text-sm leading-relaxed">ST_Buffer, ST_Union, ST_Intersection, ST_Centroid</p>
+            </div>
+            <div class="glass-card p-8" data-aos="fade-left">
+                <div class="flex items-center gap-3 mb-4"><div class="icon-hero"><i data-lucide="hammer" class="primary-color w-5 h-5"></i></div><h3 class="text-2xl font-bold">Construção e leitura</h3></div>
+                <p class="text-soft font-mono text-sm leading-relaxed">ST_MakePoint, ST_SetSRID, ST_Transform, ST_AsText</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 12. RELAÇÕES TOPOLÓGICAS (3D: intersecção) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Relações topológicas</h2>
+            <p class="text-soft text-base mt-2">ST_Within, ST_Intersects, ST_Contains, ST_DWithin</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p12-wrap" class="canvas3d"></div>
+        </div>
+    </section>
+
+    <!-- ============ 13. PONTO EM POLÍGONO (3D: prisma + ponto) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Ponto em polígono</h2>
+            <p class="text-soft text-base mt-2">Em qual micropolo cai cada solicitação</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p13-wrap" class="canvas3d"></div>
+        </div>
+    </section>
+
+    <!-- ============ 14. RAIO DE COBERTURA (3D: buffer) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Raio de cobertura</h2>
+            <p class="text-soft text-base mt-2">ST_DWithin: CMEIs a 1500 metros de uma solicitação</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p14-wrap" class="canvas3d"></div>
+        </div>
+    </section>
+
+    <!-- ============ 15. GRAUS x METROS (padrão: código) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <h2 class="text-5xl font-black">Graus erra, <span class="primary-color">metros acerta</span></h2>
+            <p class="text-soft text-lg mt-3">Medir em coordenadas geográficas dá resultado errado</p>
+        </div>
+        <div class="w-full max-w-4xl" data-aos="fade-up">
+            <p class="code-label text-softer mb-2">Distância: 4674 (graus) versus 31982 (UTM 22S, metros)</p>
+            <div class="code-card"><pre><span class="kw">SELECT</span>
+    <span class="fn">ST_Distance</span>(a.geom, b.geom)                       <span class="kw">AS</span> dist_graus,   <span class="cm">-- não use</span>
+    <span class="fn">ST_Distance</span>(<span class="fn">ST_Transform</span>(a.geom, 31982),
+                <span class="fn">ST_Transform</span>(b.geom, 31982))          <span class="kw">AS</span> dist_metros   <span class="cm">-- correto</span>
+<span class="kw">FROM</span> cmei a, cmei b
+<span class="kw">WHERE</span> a.id = 1 <span class="kw">AND</span> b.id = 2;</pre></div>
+            <p class="text-softer mt-6 text-center max-w-2xl mx-auto">Reprojete com ST_Transform ou use o tipo geography, que trabalha em metros nativamente.</p>
+        </div>
+    </section>
+
+    <!-- ============ 16. A PONTE QGIS E POSTGIS (3D: fluxo) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">A ponte QGIS e PostGIS</h2>
+            <p class="text-soft text-base mt-2">O dado do banco aparece direto no QGIS</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p16-wrap" class="canvas3d"></div>
+        </div>
+    </section>
+
+    <!-- ============ 17. DO BANCO PARA A WEB (3D: camadas) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Do banco para a web</h2>
+            <p class="text-soft text-base mt-2">PostGIS, GeoServer e o trio WMS, WFS, WMTS</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p17-wrap" class="canvas3d"></div>
+        </div>
+    </section>
+
+    <!-- ============ 18. DE MAPA PARA DECISÃO (3D: pirâmide) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">De mapa para decisão</h2>
+            <p class="text-soft text-base mt-2">Dado, informação, conhecimento, decisão</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p18-wrap" class="canvas3d"></div>
+        </div>
+    </section>
+
+    <!-- ============ 19. VAZIOS DE ATENDIMENTO (3D: colunas) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Vazios de atendimento</h2>
+            <p class="text-soft text-base mt-2">Cruzar demanda e oferta para achar regiões descobertas</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p19-wrap" class="canvas3d"></div>
+        </div>
+    </section>
+
+    <!-- ============ 20. ENCERRAMENTO (3D: globo) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-10">
+        <div id="p20-wrap" class="canvas3d absolute inset-0" style="height:100%;border-radius:0;opacity:0.5;"></div>
+        <div class="relative z-10 text-center max-w-3xl pointer-events-none" data-aos="zoom-in">
+            <h2 class="text-5xl md:text-6xl font-black mb-6">Do dado ao território,<br><span class="primary-color">do território à decisão</span></h2>
+            <p class="text-xl text-soft mb-10">O banco espacial centraliza, o SQL analisa e a web comunica. É assim que cartografia vira inteligência.</p>
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <span class="attribute-pill px-6 py-3 text-base"><i data-lucide="globe" class="inline w-4 h-4 mr-2 primary-color"></i>postgis.net</span>
+                <span class="attribute-pill px-6 py-3 text-base"><i data-lucide="user" class="inline w-4 h-4 mr-2 primary-color"></i>Valdecir Neumann</span>
+            </div>
+            <p class="text-softer mt-12 text-sm tracking-widest uppercase">Feito com Mira</p>
+        </div>
+    </section>
+
+    <!-- ============ MÓDULO 3D (Three.js procedural) ============ -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const C = { primary: 0xFF904D, accent: 0xFFC766, soft: 0x9FB2C8, white: 0xFFFFFF };
+
+        function stdMat(color, o = {}) {
+            return new THREE.MeshStandardMaterial({
+                color,
+                metalness: o.m ?? 0.3,
+                roughness: o.r ?? 0.45,
+                transparent: o.t ?? false,
+                opacity: o.o ?? 1,
+                emissive: o.emissive ?? 0x000000,
+                emissiveIntensity: o.ei ?? 0.4
+            });
+        }
+        function wireMat(color, op) {
+            return new THREE.MeshBasicMaterial({ color, wireframe: true, transparent: true, opacity: op });
+        }
+        function ringXZ(r, color, op) {
+            const seg = 96, pts = [];
+            for (let i = 0; i <= seg; i++) { const a = i / seg * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)); }
+            return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color, transparent: true, opacity: op }));
+        }
+        function edges(mesh, color, op) {
+            mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color, transparent: true, opacity: op })));
+            return mesh;
+        }
+
+        // === Núcleo: cria, anima e descarta a cena ao sair de tela (poupa contextos WebGL) ===
+        function make3D(wrapId, build, opts = {}) {
+            const wrap = document.getElementById(wrapId);
+            if (!wrap) return;
+            let state = null;
+
+            function start() {
+                if (state) return;
+                const w = wrap.clientWidth || 800, h = wrap.clientHeight || 480;
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+                camera.position.set(opts.cx ?? 0, opts.cy ?? 0.4, opts.cz ?? 3.6);
+                const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.setSize(w, h);
+                wrap.appendChild(renderer.domElement);
+
+                scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+                const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(2.5, 3, 4); scene.add(key);
+                const rim = new THREE.DirectionalLight(0xff7733, 2.2); rim.position.set(-4, -1.5, -3); scene.add(rim);
+
+                const holder = new THREE.Group(); scene.add(holder);
+                const api = build(holder) || {};
+
+                const controls = new OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true; controls.dampingFactor = 0.06; controls.enablePan = false;
+                controls.minDistance = opts.min ?? 1.8; controls.maxDistance = opts.max ?? 10;
+                controls.autoRotate = true; controls.autoRotateSpeed = opts.spin ?? 1.5;
+                let resume = null;
+                controls.addEventListener('start', () => { controls.autoRotate = false; clearTimeout(resume); });
+                controls.addEventListener('end', () => { resume = setTimeout(() => { controls.autoRotate = true; }, 2500); });
+
+                const clock = new THREE.Clock();
+                let raf = null;
+                function loop() {
+                    raf = requestAnimationFrame(loop);
+                    controls.update();
+                    if (api.tick) api.tick(clock.getElapsedTime());
+                    renderer.render(scene, camera);
+                }
+                const ro = new ResizeObserver(() => {
+                    const nw = wrap.clientWidth, nh = wrap.clientHeight; if (!nw || !nh) return;
+                    camera.aspect = nw / nh; camera.updateProjectionMatrix(); renderer.setSize(nw, nh);
+                });
+                ro.observe(wrap);
+                loop();
+
+                state = {
+                    dispose() {
+                        cancelAnimationFrame(raf);
+                        ro.disconnect();
+                        controls.dispose();
+                        clearTimeout(resume);
+                        scene.traverse(o => {
+                            if (o.geometry) o.geometry.dispose();
+                            if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose());
+                        });
+                        renderer.dispose();
+                        if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
+                    }
+                };
+            }
+            function stop() { if (state) { state.dispose(); state = null; } }
+
+            new IntersectionObserver((es) => es.forEach(e => { e.isIntersecting ? start() : stop(); }),
+                { threshold: 0.02, rootMargin: '150px' }).observe(wrap);
+        }
+
+        // ---------- Cenas ----------
+
+        // Globo de pontos (capa e encerramento)
+        function buildGlobe(holder, breathe) {
+            const N = 850, pos = [];
+            for (let i = 0; i < N; i++) {
+                const y = 1 - (i / (N - 1)) * 2;
+                const r = Math.sqrt(Math.max(0, 1 - y * y));
+                const phi = i * 2.399963;
+                pos.push(Math.cos(phi) * r, y, Math.sin(phi) * r);
+            }
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            holder.add(new THREE.Points(g, new THREE.PointsMaterial({ color: C.primary, size: 0.028 })));
+            for (let k = -3; k <= 3; k++) {
+                const lat = k * 0.26, rr = Math.sqrt(Math.max(0, 1 - lat * lat));
+                const ring = ringXZ(1, C.accent, 0.22); ring.position.y = lat; ring.scale.set(rr, 1, rr); holder.add(ring);
+            }
+            for (let m = 0; m < 6; m++) {
+                const mer = ringXZ(1, C.white, 0.10); mer.rotation.x = Math.PI / 2; mer.rotation.y = m * Math.PI / 6; holder.add(mer);
+            }
+            holder.scale.setScalar(1.35);
+            return { tick: t => { if (breathe) holder.scale.setScalar(1.35 + Math.sin(t * 0.8) * 0.05); } };
+        }
+
+        // PostGIS: núcleo orbital
+        function buildPostgis(holder) {
+            const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.62, 1), stdMat(C.primary, { emissive: C.primary, ei: 0.22, m: 0.5, r: 0.3 }));
+            holder.add(core);
+            const orbit = new THREE.Group(); holder.add(orbit);
+            const n = 6, R = 1.75;
+            for (let i = 0; i < n; i++) {
+                const a = i / n * Math.PI * 2;
+                const p = new THREE.Vector3(Math.cos(a) * R, Math.sin(a) * 0.55, Math.sin(a) * R);
+                const s = new THREE.Mesh(new THREE.SphereGeometry(0.18, 24, 24), stdMat(C.accent, { m: 0.4, r: 0.4 }));
+                s.position.copy(p); orbit.add(s);
+                orbit.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), p]), new THREE.LineBasicMaterial({ color: C.white, transparent: true, opacity: 0.12 })));
+            }
+            const torus = new THREE.Mesh(new THREE.TorusGeometry(R, 0.012, 8, 140), stdMat(C.white, { m: 0, r: 1, t: true, o: 0.18 }));
+            torus.rotation.x = Math.PI / 2.2; holder.add(torus);
+            return { tick: t => { orbit.rotation.y = t * 0.5; core.rotation.y = t * 0.8; core.rotation.x = t * 0.3; } };
+        }
+
+        // Tipos de geometria: primitivas distintas em círculo
+        function buildGeoms(holder) {
+            const items = [];
+            items.push(new THREE.Mesh(new THREE.SphereGeometry(0.34, 32, 32), stdMat(C.primary, { m: 0.4, r: 0.35, emissive: C.primary, ei: 0.12 }))); // POINT
+            const curve = new THREE.CatmullRomCurve3([
+                new THREE.Vector3(-0.45, -0.3, 0), new THREE.Vector3(-0.1, 0.35, 0.2),
+                new THREE.Vector3(0.2, -0.25, -0.1), new THREE.Vector3(0.5, 0.35, 0.1)
+            ]);
+            items.push(new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.05, 8), stdMat(C.accent, { m: 0.3, r: 0.5 }))); // LINESTRING
+            const shape = new THREE.Shape(); const pent = 5;
+            for (let i = 0; i < pent; i++) { const a = i / pent * Math.PI * 2 - Math.PI / 2, x = Math.cos(a) * 0.42, y = Math.sin(a) * 0.42; i ? shape.lineTo(x, y) : shape.moveTo(x, y); }
+            shape.closePath();
+            items.push(edges(new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: false }), stdMat(C.primary, { m: 0.3, r: 0.5, t: true, o: 0.85 })), C.white, 0.3)); // POLYGON
+            const multi = new THREE.Group();
+            for (let i = 0; i < 7; i++) { const c = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.16), stdMat(C.accent, { m: 0.4, r: 0.4 })); c.position.set((Math.random() - 0.5) * 0.75, (Math.random() - 0.5) * 0.75, (Math.random() - 0.5) * 0.75); multi.add(c); }
+            items.push(multi); // MULTI*
+            const R = 1.45;
+            items.forEach((it, i) => { const a = i / items.length * Math.PI * 2; it.position.set(Math.cos(a) * R, 0, Math.sin(a) * R); holder.add(it); });
+            return { tick: t => { items.forEach((it, i) => { it.rotation.y = t * (0.6 + i * 0.1); it.rotation.x = t * 0.2; }); } };
+        }
+
+        // SRID: globo wireframe sobre plano projetado
+        function buildSrid(holder) {
+            const globe = new THREE.Mesh(new THREE.SphereGeometry(0.85, 24, 18), wireMat(C.white, 0.18)); globe.position.y = 0.55; holder.add(globe);
+            const N = 280, pos = [];
+            for (let i = 0; i < N; i++) { const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(Math.max(0, 1 - y * y)), phi = i * 2.399963; pos.push(Math.cos(phi) * r, y, Math.sin(phi) * r); }
+            const gp = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)), new THREE.PointsMaterial({ color: C.primary, size: 0.03 }));
+            gp.scale.setScalar(0.85); gp.position.y = 0.55; holder.add(gp);
+            const grid = new THREE.GridHelper(1.9, 12, C.primary, 0x4a3522); grid.position.y = -0.95; holder.add(grid);
+            for (let i = 0; i < 5; i++) {
+                const a = i / 5 * Math.PI * 2, sx = Math.cos(a) * 0.7, sz = Math.sin(a) * 0.7;
+                const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(sx, 0.55 - 0.85, sz), new THREE.Vector3(sx * 1.1, -0.95, sz * 1.1)]), new THREE.LineBasicMaterial({ color: C.accent, transparent: true, opacity: 0.3 }));
+                holder.add(ln);
+            }
+            return { tick: t => { globe.rotation.y = t * 0.4; gp.rotation.y = t * 0.4; } };
+        }
+
+        // GiST: caixas delimitadoras aninhadas (R-tree)
+        function buildGist(holder) {
+            function box(s, color, op) { return new THREE.Mesh(new THREE.BoxGeometry(s, s, s), wireMat(color, op)); }
+            holder.add(box(2.2, C.white, 0.18));
+            const offs = [[-0.55, 0.4, -0.4], [0.5, -0.3, 0.45], [0.45, 0.5, -0.5], [-0.4, -0.5, 0.4]];
+            offs.forEach(o => {
+                const m = box(0.95, C.accent, 0.4); m.position.set(o[0], o[1], o[2]); holder.add(m);
+                for (let i = 0; i < 3; i++) {
+                    const p = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 16), stdMat(C.primary, { emissive: C.primary, ei: 0.3 }));
+                    p.position.set(o[0] + (Math.random() - 0.5) * 0.6, o[1] + (Math.random() - 0.5) * 0.6, o[2] + (Math.random() - 0.5) * 0.6);
+                    holder.add(p);
+                }
+            });
+            return {};
+        }
+
+        // Relações topológicas: dois volumes se intersectando
+        function buildTopo(holder) {
+            const a = edges(new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), stdMat(C.primary, { t: true, o: 0.4, m: 0.2, r: 0.6 })), C.white, 0.3);
+            a.position.x = -0.45; holder.add(a);
+            const b = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 32), stdMat(C.accent, { t: true, o: 0.5, m: 0.2, r: 0.5 }));
+            holder.add(b);
+            return { tick: t => { b.position.x = 0.45 + Math.sin(t * 0.7) * 0.55; a.rotation.y = t * 0.25; } };
+        }
+
+        // Ponto em polígono: prisma extrudado e ponto descendo dentro
+        function buildPip(holder) {
+            const shape = new THREE.Shape();
+            const verts = [[-0.9, -0.6], [0.2, -0.9], [1.0, -0.1], [0.6, 0.8], [-0.5, 0.7], [-1.0, 0.1]];
+            verts.forEach((v, i) => i ? shape.lineTo(v[0], v[1]) : shape.moveTo(v[0], v[1])); shape.closePath();
+            const prism = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.5, bevelEnabled: false }), stdMat(C.primary, { t: true, o: 0.28, m: 0.2, r: 0.6 }));
+            prism.rotation.x = -Math.PI / 2; prism.position.y = -0.25; holder.add(prism);
+            edges(prism, C.accent, 0.5);
+            const inside = new THREE.Mesh(new THREE.SphereGeometry(0.13, 24, 24), stdMat(C.accent, { emissive: C.accent, ei: 0.6 })); holder.add(inside);
+            [[-1.6, 0.6], [1.5, -0.8], [1.4, 0.95]].forEach(o => {
+                const p = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), stdMat(C.soft, { o: 0.5, t: true }));
+                p.position.set(o[0], 0.2, o[1]); holder.add(p);
+            });
+            return { tick: t => { inside.position.set(0, 0.25 + Math.abs(Math.sin(t * 1.3)) * 0.55, 0); } };
+        }
+
+        // Buffer: ponto central, esfera de raio pulsante e CMEIs dentro/fora
+        function buildBuffer(holder) {
+            holder.add(new THREE.Mesh(new THREE.SphereGeometry(0.15, 24, 24), stdMat(C.accent, { emissive: C.accent, ei: 0.6 })));
+            const buf = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), stdMat(C.primary, { t: true, o: 0.16, m: 0.1, r: 0.7 })); holder.add(buf);
+            const data = [[0.6, 0.3, 0.2, true], [-0.5, -0.4, 0.3, true], [1.5, 0.2, -0.6, false], [-1.4, 0.5, 0.7, false], [0.2, 1.4, -0.2, false]];
+            data.forEach(d => {
+                const inside = d[3];
+                const p = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), stdMat(inside ? C.primary : C.soft, { o: inside ? 1 : 0.5, t: !inside, emissive: inside ? C.primary : 0x000000, ei: inside ? 0.3 : 0 }));
+                p.position.set(d[0], d[1], d[2]); holder.add(p);
+            });
+            return { tick: t => buf.scale.setScalar(1.3 + Math.sin(t * 1.2) * 0.12) };
+        }
+
+        // Ponte QGIS e PostGIS: partículas fluindo entre duas plataformas
+        function buildBridge(holder) {
+            const left = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.12, 0.95), stdMat(C.accent, { m: 0.4, r: 0.4 })); left.position.set(-1.5, 0, 0); holder.add(edges(left, C.white, 0.25));
+            const right = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.5, 32), stdMat(C.primary, { m: 0.4, r: 0.4 })); right.position.set(1.5, 0, 0); holder.add(right);
+            holder.add(new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.02, 0.02), new THREE.MeshBasicMaterial({ color: C.white, transparent: true, opacity: 0.15 })));
+            const parts = [];
+            for (let i = 0; i < 14; i++) { const p = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 12), stdMat(C.primary, { emissive: C.primary, ei: 0.6 })); p.userData.o = i / 14; holder.add(p); parts.push(p); }
+            return { tick: t => { parts.forEach(p => { const f = (p.userData.o + t * 0.25) % 1; p.position.set(-1.5 + f * 3, Math.sin(f * Math.PI) * 0.45, 0); }); } };
+        }
+
+        // Web OGC: camadas empilhadas com fluxo ascendente
+        function buildWeb(holder) {
+            for (let i = 0; i < 4; i++) {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(2, 0.06, 1.4), stdMat(i % 2 ? C.accent : C.primary, { t: true, o: 0.5, m: 0.3, r: 0.5 }));
+                p.position.y = -0.95 + i * 0.62; holder.add(edges(p, C.white, 0.25));
+            }
+            const parts = [];
+            for (let i = 0; i < 11; i++) { const p = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 12), stdMat(C.accent, { emissive: C.accent, ei: 0.6 })); p.userData.o = Math.random(); p.userData.x = (Math.random() - 0.5) * 1.6; p.userData.z = (Math.random() - 0.5) * 1.1; holder.add(p); parts.push(p); }
+            return { tick: t => { parts.forEach(p => { const f = (p.userData.o + t * 0.18) % 1; p.position.set(p.userData.x, -0.98 + f * 2.05, p.userData.z); }); } };
+        }
+
+        // Inteligência geográfica: degraus ascendentes e orbe subindo
+        function buildPyramid(holder) {
+            const steps = [], n = 4;
+            for (let i = 0; i < n; i++) {
+                const w = 1.9 - i * 0.42;
+                const s = new THREE.Mesh(new THREE.BoxGeometry(w, 0.4, w), stdMat(i === n - 1 ? C.primary : C.accent, { m: 0.3, r: 0.5, t: true, o: 0.85, emissive: i === n - 1 ? C.primary : 0x000000, ei: i === n - 1 ? 0.2 : 0 }));
+                s.position.y = -0.75 + i * 0.45; holder.add(edges(s, C.white, 0.2)); steps.push(s);
+            }
+            const orb = new THREE.Mesh(new THREE.SphereGeometry(0.14, 24, 24), stdMat(C.primary, { emissive: C.primary, ei: 0.7 })); holder.add(orb);
+            return { tick: t => { const ph = (t * 0.35) % 1.05, idx = Math.min(n - 1, Math.floor(ph * n)); orb.position.set(0, steps[idx].position.y + 0.36, 0); } };
+        }
+
+        // Vazios de atendimento: mapa de colunas (demanda) com lacunas destacadas
+        function buildColumns(holder) {
+            const g = 4, bars = [];
+            for (let i = 0; i < g; i++) for (let j = 0; j < g; j++) {
+                const ht = 0.2 + Math.random() * 1.4, gap = ht < 0.45;
+                const b = new THREE.Mesh(new THREE.BoxGeometry(0.32, ht, 0.32), stdMat(gap ? C.soft : C.primary, { m: 0.3, r: 0.5, t: gap, o: gap ? 0.35 : 1, emissive: gap ? 0x000000 : C.primary, ei: gap ? 0 : 0.15 }));
+                b.position.set((i - 1.5) * 0.5, -0.7 + ht / 2, (j - 1.5) * 0.5);
+                b.userData = { h: ht, bottom: -0.7, k: i * g + j }; holder.add(b); bars.push(b);
+            }
+            const plane = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.04, 2.4), stdMat(C.white, { t: true, o: 0.06 })); plane.position.y = -0.72; holder.add(plane);
+            return { tick: t => { bars.forEach(b => { const s = 1 + Math.sin(t * 1.1 + b.userData.k) * 0.06; b.scale.y = s; b.position.y = b.userData.bottom + (b.userData.h * s) / 2; }); } };
+        }
+
+        // ---------- Montagem ----------
+        make3D('p1-wrap', h => buildGlobe(h, false), { cz: 3.4, spin: 0.7, min: 2.4, max: 7 });
+        make3D('p4-wrap', buildPostgis, { cz: 4.0, spin: 0.6 });
+        make3D('p5-wrap', buildGeoms, { cz: 3.9, spin: 0.8 });
+        make3D('p6-wrap', buildSrid, { cz: 3.7, cy: 0.1, spin: 0.7 });
+        make3D('p10-wrap', buildGist, { cz: 4.6, spin: 1.1 });
+        make3D('p12-wrap', buildTopo, { cz: 3.7, spin: 0.9 });
+        make3D('p13-wrap', buildPip, { cz: 3.9, cy: 0.5, spin: 0.9 });
+        make3D('p14-wrap', buildBuffer, { cz: 3.9, spin: 1.0 });
+        make3D('p16-wrap', buildBridge, { cz: 4.2, spin: 0.7 });
+        make3D('p17-wrap', buildWeb, { cz: 4.0, cy: 0.1, spin: 0.8 });
+        make3D('p18-wrap', buildPyramid, { cz: 3.9, cy: 0.3, spin: 0.8 });
+        make3D('p19-wrap', buildColumns, { cz: 4.3, cy: 0.5, spin: 0.9 });
+        make3D('p20-wrap', h => buildGlobe(h, true), { cz: 3.4, spin: 0.6, min: 2.4, max: 7 });
+    </script>
+
+    <!-- ============ INTERFACE: AOS, ícones e navegação ============ -->
+    <script>
+        AOS.init({ duration: 800, once: true });
+        lucide.createIcons();
+
+        // Comparação slide 3: spotlight alternando (loop)
+        (function () {
+            const a = document.getElementById('versus-a');
+            const b = document.getElementById('versus-b');
+            if (!a || !b) return;
+            let turn = true;
+            setInterval(() => {
+                const on = turn ? a : b, off = turn ? b : a;
+                on.style.transform = 'translateY(-8px) scale(1.02)';
+                on.style.boxShadow = '0 20px 50px var(--mira-glow-strong)';
+                off.style.transform = 'none';
+                off.style.boxShadow = '0 10px 30px var(--mira-glow-soft)';
+                turn = !turn;
+            }, 2500);
+        })();
+
+        // Navegação card-a-card (progresso + botão + teclado)
+        (function () {
+            const cardSections = Array.from(document.querySelectorAll('body > section'));
+            if (cardSections.length === 0) return;
+            const progress = document.getElementById('mira-progress');
+            const nextBtn = document.getElementById('mira-next');
+            const nextIcon = document.getElementById('mira-next-icon');
+
+            const atBottom = () => (window.scrollY + window.innerHeight) >= (document.documentElement.scrollHeight - 100);
+
+            function currentIndex() {
+                const y = window.scrollY + window.innerHeight * 0.3;
+                let idx = -1;
+                for (let i = 0; i < cardSections.length; i++) if (cardSections[i].offsetTop <= y) idx = i;
+                return idx;
+            }
+            function goTo(i) {
+                const idx = Math.max(0, Math.min(cardSections.length - 1, i));
+                cardSections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            window.addEventListener('scroll', () => {
+                const docH = document.documentElement.scrollHeight - window.innerHeight;
+                progress.style.width = (docH > 0 ? (window.scrollY / docH) * 100 : 0) + '%';
+                nextBtn.classList.toggle('visible', window.scrollY > 300);
+                nextIcon.setAttribute('data-lucide', atBottom() ? 'chevron-up' : 'chevron-down');
+                lucide.createIcons();
+            });
+            nextBtn.addEventListener('click', () => {
+                if (atBottom()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+                goTo(currentIndex() + 1);
+            });
+            document.addEventListener('keydown', (e) => {
+                if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key)) { e.preventDefault(); goTo(currentIndex() + 1); }
+                else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+                    e.preventDefault();
+                    const idx = currentIndex();
+                    if (idx <= 0) window.scrollTo({ top: 0, behavior: 'smooth' }); else goTo(idx - 1);
+                }
+                else if (e.key === 'Home') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+                else if (e.key === 'End') { e.preventDefault(); goTo(cardSections.length - 1); }
+                else if (e.key.toLowerCase() === 'f') { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+            });
+        })();
+    </script>
+</body>
+
+</html>

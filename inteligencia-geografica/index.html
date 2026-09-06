@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inteligência Geográfica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <script type="importmap">
+    { "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    } }
+    </script>
+
+    <style>
+        /* @MIRA:THEME:START */
+/* MIRA THEME: mira-dark (padrão) */
+:root {
+    --mira-primary: #FF904D;
+    --mira-bg: #000000;
+    --mira-text: #ffffff;
+    --mira-text-soft: rgba(255, 255, 255, 0.70);
+    --mira-text-softer: rgba(255, 255, 255, 0.50);
+    --mira-card-bg: rgba(255, 255, 255, 0.05);
+    --mira-card-border: rgba(255, 255, 255, 0.10);
+    --mira-glow-soft: rgba(255, 144, 77, 0.15);
+    --mira-glow-strong: rgba(255, 144, 77, 0.25);
+    --mira-icon-bg: rgba(255, 144, 77, 0.15);
+    --mira-icon-border: rgba(255, 144, 77, 0.30);
+    --mira-pill-bg: rgba(255, 255, 255, 0.04);
+    --mira-pill-border: rgba(255, 255, 255, 0.08);
+    --mira-stage-glow: rgba(255, 144, 77, 0.06);
+    --mira-accent-2: #FFC766;
+}
+
+body {
+    background: var(--mira-bg);
+    min-height: 100vh;
+    color: var(--mira-text);
+    font-family: 'Inter', sans-serif;
+}
+
+.primary-color { color: var(--mira-primary); }
+.primary-bg { background: var(--mira-primary); }
+
+.glass-card {
+    background: var(--mira-card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--mira-card-border);
+    box-shadow: 0 10px 30px var(--mira-glow-soft);
+    transition: all 0.3s ease;
+    border-radius: 0.75rem;
+}
+
+.glass-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px var(--mira-glow-strong);
+}
+
+.icon-hero {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    background: var(--mira-icon-bg);
+    border: 1px solid var(--mira-icon-border);
+}
+
+.attribute-pill {
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    transition: all 0.25s ease;
+    border-radius: 9999px;
+}
+
+.attribute-pill:hover {
+    background: var(--mira-icon-bg);
+    border-color: var(--mira-icon-border);
+    transform: translateY(-3px);
+}
+
+.text-soft { color: var(--mira-text-soft); }
+.text-softer { color: var(--mira-text-softer); }
+
+@keyframes mira-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+}
+        /* @MIRA:THEME:END */
+
+        /* === CONTROLES DE SLIDE === */
+        html { scroll-behavior: smooth; }
+
+        #mira-progress {
+            position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+            background: linear-gradient(90deg, var(--mira-primary), var(--mira-accent-2), var(--mira-primary));
+            background-size: 200% 100%;
+            animation: mira-shimmer 2s linear infinite;
+            z-index: 9999; transition: width 0.1s linear;
+            box-shadow: 0 0 10px var(--mira-glow-strong);
+        }
+        @keyframes mira-shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        #mira-next {
+            position: fixed; bottom: 32px; right: 32px;
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--mira-primary); color: var(--mira-bg);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: none;
+            opacity: 0; transform: translateY(20px);
+            transition: all 0.3s ease; z-index: 9998;
+            box-shadow: 0 4px 20px var(--mira-glow-strong);
+        }
+        #mira-next.visible { opacity: 1; transform: translateY(0); }
+        #mira-next:hover { transform: translateY(-3px) scale(1.1); }
+
+        /* === Palco 3D (WebGL) === */
+        .canvas3d {
+            width: 100%;
+            height: 64vh;
+            min-height: 420px;
+            border-radius: 10px;
+            background: radial-gradient(circle at 50% 45%, var(--mira-stage-glow), transparent 70%);
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
+        }
+        .canvas3d:active { cursor: grabbing; }
+        .canvas3d canvas { display: block; }
+
+        /* === Card de mapa (figura raster sobre papel claro) === */
+        .map-frame {
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+        .map-frame img { width: 100%; height: auto; display: block; border-radius: 4px; }
+        .map-cap { font-size: 0.72rem; line-height: 1.5; }
+        .stat-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+    </style>
+</head>
+
+<body>
+    <div id="mira-progress"></div>
+    <button id="mira-next" aria-label="Próximo slide">
+        <i data-lucide="chevron-down" class="w-6 h-6" id="mira-next-icon"></i>
+    </button>
+
+    <!-- ============ 1. CAPA (3D: globo de pontos) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-10">
+        <div id="p1-wrap" class="canvas3d absolute inset-0" style="height:100%;border-radius:0;opacity:0.55;"></div>
+        <div class="relative z-10 text-center max-w-4xl pointer-events-none" data-aos="fade-up">
+            <p class="attribute-pill inline-block px-5 py-2 text-sm tracking-widest uppercase text-soft mb-8">Do mapa à decisão</p>
+            <h1 class="text-6xl md:text-7xl font-black leading-tight mb-6">
+                Inteligência<br>
+                <span class="primary-color">Geográfica</span>
+            </h1>
+            <p class="text-xl text-soft max-w-2xl mx-auto mb-10">Quando a localização vira evidência. Estatística espacial, índice de Moran e LISA para enxergar padrões que o mapa comum esconde.</p>
+            <div class="flex items-center justify-center gap-3 text-softer text-sm">
+                <i data-lucide="user" class="w-4 h-4 primary-color"></i> Valdecir Neumann
+                <span class="opacity-40">|</span>
+                <i data-lucide="map-pinned" class="w-4 h-4 primary-color"></i> Toledo, Paraná
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 2. O QUE É (3D: escada dado a decisão) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">O que é inteligência geográfica</h2>
+            <p class="text-soft text-base mt-2">Transformar localização em conhecimento, e conhecimento em decisão</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p2-wrap" class="canvas3d"></div>
+        </div>
+        <p class="text-softer text-sm mt-4 max-w-3xl text-center">Dado, informação, conhecimento, decisão. Cada degrau pergunta não só o quê, mas onde, e o porquê de estar ali.</p>
+    </section>
+
+    <!-- ============ 3. PRIMEIRA LEI (3D: autocorrelação) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">A primeira lei da geografia</h2>
+            <p class="text-soft text-base mt-2">Tudo se relaciona com tudo, mas o que está perto se relaciona mais</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p3-wrap" class="canvas3d"></div>
+        </div>
+        <p class="text-softer text-sm mt-4 max-w-3xl text-center">Autocorrelação espacial: valores parecidos tendem a se agrupar. Positiva agrupa, negativa separa, ausente espalha ao acaso.</p>
+    </section>
+
+    <!-- ============ 4. FERRAMENTAS (padrão: 3 cards) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-12" data-aos="fade-up">
+            <h2 class="text-5xl font-black">As ferramentas</h2>
+            <p class="text-soft text-lg mt-3">Três peças medem o padrão espacial</p>
+        </div>
+        <div class="grid md:grid-cols-3 gap-6 w-full max-w-5xl items-stretch">
+            <div class="glass-card p-8" data-aos="fade-up" data-aos-delay="0">
+                <div class="icon-hero mb-5"><i data-lucide="grid-3x3" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-3">Matriz de pesos W</h3>
+                <p class="text-soft">Define quem é vizinho de quem. Aqui, escolas a até 2300 metros uma da outra.</p>
+            </div>
+            <div class="glass-card p-8" data-aos="fade-up" data-aos-delay="100">
+                <div class="icon-hero mb-5"><i data-lucide="globe-2" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-3">Índice I de Moran</h3>
+                <p class="text-soft">Mede a autocorrelação no mapa inteiro. Um número resume se há ou não padrão global.</p>
+            </div>
+            <div class="glass-card p-8" data-aos="fade-up" data-aos-delay="200">
+                <div class="icon-hero mb-5"><i data-lucide="locate-fixed" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-3">LISA local</h3>
+                <p class="text-soft">Indicador local de associação espacial. Aponta onde, exatamente, estão os agrupamentos.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 5. MATRIZ W (3D: rede de vizinhança) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Quem é vizinho de quem</h2>
+            <p class="text-soft text-base mt-2">A matriz de pesos liga unidades próximas e ignora as distantes</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p5-wrap" class="canvas3d"></div>
+        </div>
+        <p class="text-softer text-sm mt-4 max-w-3xl text-center">Cada laço é uma relação de vizinhança. Sem essa rede, não há autocorrelação a medir.</p>
+    </section>
+
+    <!-- ============ 6. CASO TOLEDO (padrão: pills) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-10" data-aos="fade-up">
+            <h2 class="text-5xl font-black">O caso de <span class="primary-color">Toledo</span></h2>
+            <p class="text-soft text-lg mt-3">Desempenho em matemática do 4º ano nas escolas municipais</p>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-5 w-full max-w-5xl items-stretch" data-aos="fade-up">
+            <div class="glass-card p-7 text-center">
+                <p class="stat-num text-4xl primary-color">24</p>
+                <p class="text-soft text-sm mt-2">escolas municipais</p>
+            </div>
+            <div class="glass-card p-7 text-center">
+                <p class="stat-num text-4xl primary-color">4º</p>
+                <p class="text-soft text-sm mt-2">ano do fundamental</p>
+            </div>
+            <div class="glass-card p-7 text-center">
+                <p class="stat-num text-4xl primary-color">% acertos</p>
+                <p class="text-soft text-sm mt-2">variável georreferenciada</p>
+            </div>
+            <div class="glass-card p-7 text-center">
+                <p class="stat-num text-4xl primary-color">UTM</p>
+                <p class="text-soft text-sm mt-2">coordenadas por Google Earth Pro</p>
+            </div>
+        </div>
+        <p class="text-softer text-sm mt-8 max-w-3xl text-center">Toledo, oeste do Paraná, cerca de 150 mil habitantes e 1.198 km². Dados de notas cedidos pela Secretaria Municipal de Educação.</p>
+    </section>
+
+    <!-- ============ 7. MAPA: DESEMPENHO (imagem) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+        <div class="text-center mb-6" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Distribuição do desempenho</h2>
+            <p class="text-soft text-base mt-2">Cada escola, o percentual de acertos em matemática</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-5" data-aos="fade-up">
+            <div class="map-frame"><img src="assets/desempenho.png" alt="Mapa da distribuição do desempenho em matemática no 4º ano nas escolas municipais de Toledo"></div>
+            <p class="map-cap text-softer mt-3 text-center">Figura 2: distribuição do desempenho em matemática no 4º ano. Fonte: Dalposso, Merli e Neumann (2025), Revista Interritórios.</p>
+        </div>
+    </section>
+
+    <!-- ============ 8. MAPA: MORAN (imagem + callout) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+        <div class="text-center mb-6" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Diagrama de espalhamento de Moran</h2>
+            <p class="text-soft text-base mt-2">Quatro quadrantes: Alto-Alto, Baixo-Baixo, e os contrastes</p>
+        </div>
+        <div class="grid md:grid-cols-5 gap-6 w-full max-w-5xl items-center" data-aos="fade-up">
+            <div class="glass-card p-5 md:col-span-3">
+                <div class="map-frame"><img src="assets/moran-scatter.png" alt="Diagrama de espalhamento de Moran do desempenho em matemática"></div>
+                <p class="map-cap text-softer mt-3 text-center">Figura 4: diagrama de espalhamento de Moran. Fonte: Dalposso et al. (2025).</p>
+            </div>
+            <div class="md:col-span-2 text-center md:text-left">
+                <p class="text-softer text-sm uppercase tracking-widest mb-1">Índice I de Moran global</p>
+                <p class="stat-num text-6xl primary-color mb-4">0,199</p>
+                <p class="text-soft">Leve autocorrelação espacial positiva. O eixo horizontal traz a nota padronizada, o vertical a média das escolas vizinhas.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 9. MAPA: CLUSTERS LISA TOLEDO (imagem) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+        <div class="text-center mb-6" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Onde estão os clusters</h2>
+            <p class="text-soft text-base mt-2">Mapa de agrupamento LISA do desempenho escolar</p>
+        </div>
+        <div class="grid md:grid-cols-5 gap-6 w-full max-w-5xl items-center" data-aos="fade-up">
+            <div class="glass-card p-5 md:col-span-3">
+                <div class="map-frame"><img src="assets/lisa-clusters.png" alt="Mapa de agrupamento LISA do desempenho em matemática nas escolas de Toledo"></div>
+                <p class="map-cap text-softer mt-3 text-center">Figura 7: mapa de agrupamento LISA. Fonte: Dalposso et al. (2025).</p>
+            </div>
+            <div class="md:col-span-2">
+                <div class="flex items-start gap-3 mb-4">
+                    <span class="stat-num text-3xl primary-color">7</span>
+                    <p class="text-soft mt-1">escolas em cluster <span class="text-white font-semibold">Alto-Alto</span>, alto desempenho cercado de alto, ao norte.</p>
+                </div>
+                <div class="flex items-start gap-3 mb-4">
+                    <span class="stat-num text-3xl primary-color">7</span>
+                    <p class="text-soft mt-1">escolas em cluster <span class="text-white font-semibold">Baixo-Baixo</span>, concentradas na região sul.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="stat-num text-3xl primary-color">10</span>
+                    <p class="text-soft mt-1">escolas em contraste local, Alto-Baixo ou Baixo-Alto.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ 10. RESULTADO: AMILTON COVID (imagem alta resolução) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+        <div class="text-center mb-6" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Mesmo método, outro tema</h2>
+            <p class="text-soft text-base mt-2">Distribuição espacial de casos de COVID-19 em Toledo</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-5" data-aos="fade-up">
+            <div class="map-frame"><img src="assets/amilton-lisa.png" alt="Mapas de significância e agrupamento LISA da distribuição espacial de casos de COVID-19 em Toledo"></div>
+            <p class="map-cap text-softer mt-3 text-center">Análise LISA por bairro. Fonte: Garcia, Dalposso, Uribe Opazo e colaboradores (2024), Informe GEPEC.</p>
+        </div>
+        <p class="text-softer text-sm mt-4 max-w-3xl text-center">A mesma estatística espacial que mapeia notas mapeia contágio. A ferramenta é geral, o que muda é a pergunta.</p>
+    </section>
+
+    <!-- ============ 11. RESULTADO: MARCO IDEB (duas imagens) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+        <div class="text-center mb-6" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Do município à mesorregião</h2>
+            <p class="text-soft text-base mt-2">IDEB no oeste paranaense, do valor bruto ao cluster</p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6 w-full max-w-5xl items-stretch" data-aos="fade-up">
+            <div class="glass-card p-5">
+                <div class="map-frame"><img src="assets/ideb-coropletico.png" alt="Mapa coroplético do IDEB por município na mesorregião oeste do Paraná"></div>
+                <p class="map-cap text-softer mt-3 text-center">Coroplético do IDEB por município.</p>
+            </div>
+            <div class="glass-card p-5">
+                <div class="map-frame"><img src="assets/ideb-lisa.png" alt="Mapa de clusters LISA do IDEB na mesorregião oeste do Paraná"></div>
+                <p class="map-cap text-softer mt-3 text-center">Clusters LISA do IDEB.</p>
+            </div>
+        </div>
+        <p class="text-softer text-sm mt-4 max-w-3xl text-center">Fonte: Amaral (2021), TCC em Licenciatura em Matemática, UTFPR Toledo.</p>
+    </section>
+
+    <!-- ============ 12. DE MAPA PARA DECISÃO (3D: colunas) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-8">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">De mapa para decisão</h2>
+            <p class="text-soft text-base mt-2">O cluster não é ponto final, é onde a política começa</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 relative" data-aos="fade-up">
+            <div id="p12-wrap" class="canvas3d"></div>
+        </div>
+        <p class="text-softer text-sm mt-4 max-w-3xl text-center">Os agrupamentos de baixo desempenho ao sul revelam desigualdade regional. Ver onde permite agir onde, com intervenção direcionada.</p>
+    </section>
+
+    <!-- ============ 13. ENCERRAMENTO (3D: globo) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-10">
+        <div id="p13-wrap" class="canvas3d absolute inset-0" style="height:100%;border-radius:0;opacity:0.5;"></div>
+        <div class="relative z-10 text-center max-w-3xl pointer-events-none" data-aos="zoom-in">
+            <h2 class="text-5xl md:text-6xl font-black mb-6">A localização<br><span class="primary-color">é evidência</span></h2>
+            <p class="text-xl text-soft mb-10">Notas, IDEB ou Contágio: onde os dados estão importam tanto quanto valem. Isso é inteligência geográfica.</p>
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <span class="attribute-pill px-6 py-3 text-base"><i data-lucide="map-pinned" class="inline w-4 h-4 mr-2 primary-color"></i>Toledo, Paraná</span>
+                <span class="attribute-pill px-6 py-3 text-base"><i data-lucide="user" class="inline w-4 h-4 mr-2 primary-color"></i>Valdecir Neumann</span>
+            </div>
+            <p class="text-softer mt-12 text-sm tracking-widest uppercase">Feito com Mira</p>
+        </div>
+    </section>
+
+    <!-- ============ MÓDULO 3D (Three.js procedural) ============ -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const C = { primary: 0xFF904D, accent: 0xFFC766, soft: 0x9FB2C8, blue: 0x5AA9E6, white: 0xFFFFFF };
+
+        function stdMat(color, o = {}) {
+            return new THREE.MeshStandardMaterial({
+                color, metalness: o.m ?? 0.3, roughness: o.r ?? 0.45,
+                transparent: o.t ?? false, opacity: o.o ?? 1,
+                emissive: o.emissive ?? 0x000000, emissiveIntensity: o.ei ?? 0.4
+            });
+        }
+        function ringXZ(r, color, op) {
+            const seg = 96, pts = [];
+            for (let i = 0; i <= seg; i++) { const a = i / seg * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)); }
+            return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color, transparent: true, opacity: op }));
+        }
+        function edges(mesh, color, op) {
+            mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color, transparent: true, opacity: op })));
+            return mesh;
+        }
+
+        // Núcleo: cria, anima e descarta a cena ao sair de tela
+        function make3D(wrapId, build, opts = {}) {
+            const wrap = document.getElementById(wrapId);
+            if (!wrap) return;
+            let state = null;
+            function start() {
+                if (state) return;
+                const w = wrap.clientWidth || 800, h = wrap.clientHeight || 480;
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+                camera.position.set(opts.cx ?? 0, opts.cy ?? 0.4, opts.cz ?? 3.6);
+                const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.setSize(w, h);
+                wrap.appendChild(renderer.domElement);
+
+                scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+                const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(2.5, 3, 4); scene.add(key);
+                const rim = new THREE.DirectionalLight(0xff7733, 2.2); rim.position.set(-4, -1.5, -3); scene.add(rim);
+
+                const holder = new THREE.Group(); scene.add(holder);
+                const api = build(holder) || {};
+
+                const controls = new OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true; controls.dampingFactor = 0.06; controls.enablePan = false;
+                controls.minDistance = opts.min ?? 1.8; controls.maxDistance = opts.max ?? 10;
+                controls.autoRotate = true; controls.autoRotateSpeed = opts.spin ?? 1.5;
+                let resume = null;
+                controls.addEventListener('start', () => { controls.autoRotate = false; clearTimeout(resume); });
+                controls.addEventListener('end', () => { resume = setTimeout(() => { controls.autoRotate = true; }, 2500); });
+
+                const clock = new THREE.Clock();
+                let raf = null;
+                function loop() {
+                    raf = requestAnimationFrame(loop);
+                    controls.update();
+                    if (api.tick) api.tick(clock.getElapsedTime());
+                    renderer.render(scene, camera);
+                }
+                const ro = new ResizeObserver(() => {
+                    const nw = wrap.clientWidth, nh = wrap.clientHeight; if (!nw || !nh) return;
+                    camera.aspect = nw / nh; camera.updateProjectionMatrix(); renderer.setSize(nw, nh);
+                });
+                ro.observe(wrap);
+                loop();
+
+                state = {
+                    dispose() {
+                        cancelAnimationFrame(raf);
+                        ro.disconnect();
+                        controls.dispose();
+                        clearTimeout(resume);
+                        scene.traverse(o => {
+                            if (o.geometry) o.geometry.dispose();
+                            if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose());
+                        });
+                        renderer.dispose();
+                        if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
+                    }
+                };
+            }
+            function stop() { if (state) { state.dispose(); state = null; } }
+            new IntersectionObserver((es) => es.forEach(e => { e.isIntersecting ? start() : stop(); }),
+                { threshold: 0.02, rootMargin: '150px' }).observe(wrap);
+        }
+
+        // ---------- Cenas ----------
+
+        // Globo de pontos (capa e encerramento)
+        function buildGlobe(holder, breathe) {
+            const N = 850, pos = [];
+            for (let i = 0; i < N; i++) {
+                const y = 1 - (i / (N - 1)) * 2;
+                const r = Math.sqrt(Math.max(0, 1 - y * y));
+                const phi = i * 2.399963;
+                pos.push(Math.cos(phi) * r, y, Math.sin(phi) * r);
+            }
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            holder.add(new THREE.Points(g, new THREE.PointsMaterial({ color: C.primary, size: 0.028 })));
+            for (let k = -3; k <= 3; k++) {
+                const lat = k * 0.26, rr = Math.sqrt(Math.max(0, 1 - lat * lat));
+                const ring = ringXZ(1, C.accent, 0.22); ring.position.y = lat; ring.scale.set(rr, 1, rr); holder.add(ring);
+            }
+            for (let m = 0; m < 6; m++) {
+                const mer = ringXZ(1, C.white, 0.10); mer.rotation.x = Math.PI / 2; mer.rotation.y = m * Math.PI / 6; holder.add(mer);
+            }
+            holder.scale.setScalar(1.35);
+            return { tick: t => { if (breathe) holder.scale.setScalar(1.35 + Math.sin(t * 0.8) * 0.05); } };
+        }
+
+        // Escada dado -> informação -> conhecimento -> decisão, orbe subindo
+        function buildPyramid(holder) {
+            const steps = [], n = 4;
+            for (let i = 0; i < n; i++) {
+                const w = 1.9 - i * 0.42;
+                const s = new THREE.Mesh(new THREE.BoxGeometry(w, 0.4, w), stdMat(i === n - 1 ? C.primary : C.accent, { m: 0.3, r: 0.5, t: true, o: 0.85, emissive: i === n - 1 ? C.primary : 0x000000, ei: i === n - 1 ? 0.2 : 0 }));
+                s.position.y = -0.75 + i * 0.45; holder.add(edges(s, C.white, 0.2)); steps.push(s);
+            }
+            const orb = new THREE.Mesh(new THREE.SphereGeometry(0.14, 24, 24), stdMat(C.primary, { emissive: C.primary, ei: 0.7 })); holder.add(orb);
+            return { tick: t => { const ph = (t * 0.35) % 1.05, idx = Math.min(n - 1, Math.floor(ph * n)); orb.position.set(0, steps[idx].position.y + 0.36, 0); } };
+        }
+
+        // Autocorrelação: tabuleiro de cubos coloridos por campo espacial suave (valores parecidos se agrupam)
+        function buildAutocorr(holder) {
+            const g = 6, cubes = [];
+            const col1 = new THREE.Color(C.primary), col2 = new THREE.Color(C.blue);
+            for (let i = 0; i < g; i++) for (let j = 0; j < g; j++) {
+                const f = (Math.sin(i * 0.9) + Math.cos(j * 0.9) + 2) / 4; // campo suave -> clusters
+                const col = col2.clone().lerp(col1, f);
+                const c = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.42),
+                    new THREE.MeshStandardMaterial({ color: col, metalness: 0.3, roughness: 0.5, emissive: col, emissiveIntensity: 0.15 }));
+                c.position.set((i - (g - 1) / 2) * 0.5, 0, (j - (g - 1) / 2) * 0.5);
+                c.userData = { f, k: i * g + j }; holder.add(c); cubes.push(c);
+            }
+            return { tick: t => { cubes.forEach(c => { c.position.y = Math.sin(t * 1.1 + c.userData.k * 0.25) * 0.12 + c.userData.f * 0.35; }); } };
+        }
+
+        // Rede de vizinhança (matriz W): nós e laços entre os próximos
+        function buildNet(holder) {
+            const nodes = [], P = [];
+            const N = 11;
+            for (let i = 0; i < N; i++) {
+                const a = i / N * Math.PI * 2;
+                const r = 0.9 + (i % 3) * 0.45;
+                const p = new THREE.Vector3(Math.cos(a) * r, (((i * 37) % 11) / 11 - 0.5) * 1.1, Math.sin(a) * r * 0.9);
+                P.push(p);
+                const m = new THREE.Mesh(new THREE.SphereGeometry(0.13, 20, 20), stdMat(C.primary, { emissive: C.primary, ei: 0.35, m: 0.4, r: 0.4 }));
+                m.position.copy(p); holder.add(m); nodes.push(m);
+            }
+            const TH = 1.25; // limiar de vizinhança
+            for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+                if (P[i].distanceTo(P[j]) <= TH) {
+                    holder.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([P[i], P[j]]),
+                        new THREE.LineBasicMaterial({ color: C.accent, transparent: true, opacity: 0.4 })));
+                }
+            }
+            return { tick: t => { nodes.forEach((n, i) => { const s = 1 + Math.sin(t * 1.6 + i) * 0.18; n.scale.setScalar(s); }); } };
+        }
+
+        // De mapa para decisão: mapa de colunas com lacunas (baixo desempenho destacado)
+        function buildColumns(holder) {
+            const g = 4, bars = [];
+            const hts = [1.5, 0.3, 1.2, 0.9, 0.4, 1.4, 1.1, 0.35, 0.3, 1.3, 0.5, 1.0, 1.2, 0.4, 0.9, 1.5];
+            let idx = 0;
+            for (let i = 0; i < g; i++) for (let j = 0; j < g; j++) {
+                const ht = hts[idx], gap = ht < 0.55;
+                const b = new THREE.Mesh(new THREE.BoxGeometry(0.32, ht, 0.32), stdMat(gap ? C.soft : C.primary, { m: 0.3, r: 0.5, t: gap, o: gap ? 0.4 : 1, emissive: gap ? 0x000000 : C.primary, ei: gap ? 0 : 0.18 }));
+                b.position.set((i - 1.5) * 0.5, -0.7 + ht / 2, (j - 1.5) * 0.5);
+                b.userData = { h: ht, bottom: -0.7, k: idx }; holder.add(b); bars.push(b); idx++;
+            }
+            const plane = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.04, 2.4), stdMat(C.white, { t: true, o: 0.06 })); plane.position.y = -0.72; holder.add(plane);
+            return { tick: t => { bars.forEach(b => { const s = 1 + Math.sin(t * 1.1 + b.userData.k) * 0.06; b.scale.y = s; b.position.y = b.userData.bottom + (b.userData.h * s) / 2; }); } };
+        }
+
+        // ---------- Montagem ----------
+        make3D('p1-wrap', h => buildGlobe(h, false), { cz: 3.4, spin: 0.7, min: 2.4, max: 7 });
+        make3D('p2-wrap', buildPyramid, { cz: 3.9, cy: 0.3, spin: 0.8 });
+        make3D('p3-wrap', buildAutocorr, { cz: 4.2, cy: 0.6, spin: 0.7 });
+        make3D('p5-wrap', buildNet, { cz: 4.0, spin: 0.9 });
+        make3D('p12-wrap', buildColumns, { cz: 4.3, cy: 0.5, spin: 0.9 });
+        make3D('p13-wrap', h => buildGlobe(h, true), { cz: 3.4, spin: 0.6, min: 2.4, max: 7 });
+    </script>
+
+    <!-- ============ INTERFACE: AOS, ícones e navegação ============ -->
+    <script>
+        AOS.init({ duration: 800, once: true });
+        lucide.createIcons();
+
+        (function () {
+            const cardSections = Array.from(document.querySelectorAll('body > section'));
+            if (cardSections.length === 0) return;
+            const progress = document.getElementById('mira-progress');
+            const nextBtn = document.getElementById('mira-next');
+            const nextIcon = document.getElementById('mira-next-icon');
+            const atBottom = () => (window.scrollY + window.innerHeight) >= (document.documentElement.scrollHeight - 100);
+            function currentIndex() {
+                const y = window.scrollY + window.innerHeight * 0.3;
+                let idx = -1;
+                for (let i = 0; i < cardSections.length; i++) if (cardSections[i].offsetTop <= y) idx = i;
+                return idx;
+            }
+            function goTo(i) {
+                const idx = Math.max(0, Math.min(cardSections.length - 1, i));
+                cardSections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            window.addEventListener('scroll', () => {
+                const docH = document.documentElement.scrollHeight - window.innerHeight;
+                progress.style.width = (docH > 0 ? (window.scrollY / docH) * 100 : 0) + '%';
+                nextBtn.classList.toggle('visible', window.scrollY > 300);
+                nextIcon.setAttribute('data-lucide', atBottom() ? 'chevron-up' : 'chevron-down');
+                lucide.createIcons();
+            });
+            nextBtn.addEventListener('click', () => {
+                if (atBottom()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+                goTo(currentIndex() + 1);
+            });
+            document.addEventListener('keydown', (e) => {
+                if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key)) { e.preventDefault(); goTo(currentIndex() + 1); }
+                else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+                    e.preventDefault();
+                    const idx = currentIndex();
+                    if (idx <= 0) window.scrollTo({ top: 0, behavior: 'smooth' }); else goTo(idx - 1);
+                }
+                else if (e.key === 'Home') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+                else if (e.key === 'End') { e.preventDefault(); goTo(cardSections.length - 1); }
+                else if (e.key.toLowerCase() === 'f') { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+            });
+        })();
+    </script>
+</body>
+
+</html>
