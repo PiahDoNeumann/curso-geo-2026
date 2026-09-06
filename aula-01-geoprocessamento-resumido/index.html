@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Geoprocessamento na Gestão Municipal (resumido)</title>
+    <script src="assets/vendor/tailwind.js"></script>
+    <link href="assets/vendor/aos.css" rel="stylesheet">
+    <script src="assets/vendor/aos.js"></script>
+    <script src="assets/vendor/lucide.js"></script>
+    <script src="assets/vendor/d3.v7.min.js"></script>
+    <link href="assets/vendor/inter.css" rel="stylesheet">
+    <style>
+        /* @MIRA:THEME:START */
+/* MIRA THEME: mira-dark (padrão)
+   Identidade clássica do canal: fundo preto, laranja vibrante,
+   glassmorphism no estilo clássico do canal. */
+:root {
+    --mira-primary: #FF904D;
+    --mira-crop: #35D07F;
+    --mira-bg: #000000;
+    --mira-text: #ffffff;
+    --mira-text-soft: rgba(255, 255, 255, 0.70);
+    --mira-text-softer: rgba(255, 255, 255, 0.50);
+    --mira-card-bg: rgba(255, 255, 255, 0.05);
+    --mira-card-border: rgba(255, 255, 255, 0.10);
+    --mira-glow-soft: rgba(255, 144, 77, 0.15);
+    --mira-glow-strong: rgba(255, 144, 77, 0.25);
+    --mira-icon-bg: rgba(255, 144, 77, 0.15);
+    --mira-icon-border: rgba(255, 144, 77, 0.30);
+    --mira-pill-bg: rgba(255, 255, 255, 0.04);
+    --mira-pill-border: rgba(255, 255, 255, 0.08);
+    --mira-stage-glow: rgba(255, 144, 77, 0.06);
+    --mira-accent-2: #FFC766;
+}
+
+
+/* ============================================================
+   MIRA — base.css
+   Estrutura compartilhada por todos os temas.
+   Os temas definem apenas as CSS variables (--mira-*).
+   ============================================================ */
+
+body {
+    background: var(--mira-bg);
+    min-height: 100vh;
+    color: var(--mira-text);
+    font-family: 'Inter', sans-serif;
+}
+
+.primary-color { color: var(--mira-primary); }
+.primary-bg { background: var(--mira-primary); }
+
+.glass-card {
+    background: var(--mira-card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--mira-card-border);
+    box-shadow: 0 10px 30px var(--mira-glow-soft);
+    transition: all 0.3s ease;
+    border-radius: 0.75rem;
+}
+
+.glass-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px var(--mira-glow-strong);
+}
+
+.icon-hero {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    background: var(--mira-icon-bg);
+    border: 1px solid var(--mira-icon-border);
+}
+
+.attribute-pill {
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    transition: all 0.25s ease;
+    border-radius: 9999px;
+}
+
+.attribute-pill:hover {
+    background: var(--mira-icon-bg);
+    border-color: var(--mira-icon-border);
+    transform: translateY(-3px);
+}
+
+/* Palco de animação D3 — tamanho padrão do canvas */
+.anim-stage {
+    width: 100%;
+    height: clamp(400px, 60vh, 620px);
+    background: radial-gradient(circle at 50% 50%, var(--mira-stage-glow), transparent 70%);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.anim-stage svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.replay-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    color: var(--mira-text-soft);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.replay-btn:hover {
+    background: var(--mira-icon-bg);
+    color: var(--mira-primary);
+}
+
+.text-soft { color: var(--mira-text-soft); }
+.text-softer { color: var(--mira-text-softer); }
+
+@keyframes mira-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+@keyframes mira-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes mira-gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* @MIRA:THEME:END */
+
+        /* Diretriz de titulo da capa (CLAUDE.md): quebra equilibrada so no primeiro slide */
+        body > section:first-of-type h1,
+        body > section:first-of-type h2 { text-wrap: balance; }
+
+        /* === CONTROLES DE SLIDE (passagem card-a-card) === */
+        html { scroll-behavior: smooth; }
+        /* Scroll discreto (padrao Mira): a navegacao e por teclado/botao e o
+           progresso ja aparece na barra do topo; a scrollbar fica quase invisivel. */
+        html { scrollbar-width: thin; scrollbar-color: #2e2e2e #0d0d0d; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; background: #0d0d0d; }
+        ::-webkit-scrollbar-track { background: #0d0d0d; }
+        ::-webkit-scrollbar-thumb { background: #2e2e2e; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+        ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+
+        #mira-progress {
+            position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+            background: linear-gradient(90deg, var(--mira-primary), var(--mira-accent-2), var(--mira-primary));
+            background-size: 200% 100%;
+            animation: mira-shimmer 2s linear infinite;
+            z-index: 9999; transition: width 0.1s linear;
+            box-shadow: 0 0 10px var(--mira-glow-strong);
+        }
+
+        @keyframes mira-shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+
+        #mira-next {
+            position: fixed; bottom: 32px; right: 32px;
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--mira-primary); color: var(--mira-bg);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: none;
+            opacity: 0; transform: translateY(20px);
+            transition: all 0.3s ease; z-index: 9998;
+            box-shadow: 0 4px 20px var(--mira-glow-strong);
+        }
+        #mira-next.visible { opacity: 1; transform: translateY(0); }
+        #mira-next:hover { transform: translateY(-3px) scale(1.1); }
+    
+        .lote { opacity: 0; transition: all .7s cubic-bezier(.34,1.4,.64,1); }
+        .img-breathe { animation: mira-breathe 4s ease-in-out infinite; }
+        @keyframes mira-breathe { 0%,100% { box-shadow: 0 0 0 var(--mira-glow-soft); } 50% { box-shadow: 0 0 40px var(--mira-glow-strong); } }
+        .glass-card:hover { transform: none; }
+/* @MIRA:RESPONSIVE:START */
+/* ============================================================
+   MIRA — responsive.css  (camada de reflow mobile-first)
+   Objetivo: TODO slide 16:9 do Mira vira legível no celular em
+   retrato SEM arquivo mobile separado. O mesmo deck se reorganiza:
+   fontes encolhem, grids empilham, padding reduz, palcos escalam.
+
+   Estratégia: os decks nascem "desktop-first" (classes Tailwind com
+   tamanhos fixos: text-6xl, p-10, ...). Esta camada sobrescreve essas
+   classes abaixo de 640px. Usa !important de propósito — precisa
+   vencer o Tailwind CDN (injetado em runtime) em decks legados sem
+   reescrever o HTML. Os clamps têm teto ~= valor desktop, então em
+   telas largas nada muda; só encolhem no estreito.
+   ============================================================ */
+
+/* Guarda universal contra overflow horizontal (o "print cortado" no zap). */
+html, body { max-width: 100%; overflow-x: hidden; }
+img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
+
+@media (max-width: 640px) {
+
+  /* --- Tipografia fluida: encolhe títulos gigantes no celular --- */
+  .text-9xl { font-size: clamp(3rem, 12vw, 5rem)      !important; line-height: 1.05 !important; }
+  .text-8xl { font-size: clamp(2.75rem, 11vw, 4.5rem) !important; line-height: 1.06 !important; }
+  .text-7xl { font-size: clamp(2.25rem, 10vw, 3.75rem)!important; line-height: 1.08 !important; }
+  .text-6xl { font-size: clamp(2rem, 9vw, 3rem)       !important; line-height: 1.1  !important; }
+  .text-5xl { font-size: clamp(1.75rem, 8vw, 2.5rem)  !important; line-height: 1.12 !important; }
+  .text-4xl { font-size: clamp(1.5rem, 7vw, 2rem)     !important; line-height: 1.15 !important; }
+  .text-3xl { font-size: clamp(1.35rem, 6vw, 1.75rem) !important; line-height: 1.2  !important; }
+  .text-2xl { font-size: clamp(1.2rem, 5vw, 1.5rem)   !important; line-height: 1.25 !important; }
+  .text-xl  { font-size: clamp(1.05rem, 4.5vw, 1.25rem)!important; line-height: 1.3 !important; }
+
+  /* Títulos: quebram entre palavras; só partem uma palavra se ela sozinha
+     estourar a largura. Sem hyphens:auto — em PT ele hifena no meio
+     ("pode-rosas") e fica feio em título de display. */
+  h1, h2, h3 { overflow-wrap: break-word; }
+
+  /* --- Espaçamento: paddings de desktop sufocam o celular --- */
+  .p-12 { padding: 1.25rem !important; }
+  .p-10 { padding: 1.15rem !important; }
+  .p-8  { padding: 1.05rem !important; }
+  .px-12, .px-10 { padding-left: 1.15rem !important; padding-right: 1.15rem !important; }
+  .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .py-16 { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
+  .gap-8 { gap: 1rem !important; }
+  .gap-10, .gap-12 { gap: 1.25rem !important; }
+
+  /* --- Layout: seção de slide sempre alcançável pelo topo ---
+     min-h-screen + justify-center clipa o topo quando o conteúdo é
+     maior que a tela. No celular, ancora no topo e deixa rolar. */
+  .min-h-screen {
+    min-height: 100dvh !important;
+    height: auto !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+  .min-h-screen.justify-center,
+  .min-h-screen.items-center { justify-content: flex-start !important; }
+
+  /* --- Grids/flex de 2+ colunas empilham (redundante ao md: do
+         Tailwind, mas cobre grids sem breakpoint declarado). --- */
+  .grid-cols-2, .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr !important; }
+
+  /* --- Palco de animação (D3/SVG/canvas): nunca estoura a largura,
+         mantém proporção e encolhe a altura. --- */
+  .anim-stage {
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+    min-height: 0 !important;
+  }
+
+  /* --- Tabelas: fonte menor + rolagem horizontal se precisar. --- */
+  table { font-size: 0.82rem !important; }
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+  /* --- Controles flutuantes respeitam a safe-area do iPhone. --- */
+  #mira-next, #next-card {
+    bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+    right: max(1rem, env(safe-area-inset-right)) !important;
+    width: 44px !important; height: 44px !important;
+  }
+}
+/* @MIRA:RESPONSIVE:END */
+</style>
+</head>
+
+<body>
+    <!-- Controles de slide: barra de progresso + botão flutuante "próximo" -->
+    <div id="mira-progress"></div>
+    <button id="mira-next" aria-label="Próximo slide">
+        <i data-lucide="chevron-down" class="w-6 h-6" id="mira-next-icon"></i>
+    </button>
+
+    <!-- ============ SLIDE 1: CAPA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6">
+        <div id="capa-stage" class="absolute inset-0 pointer-events-none"></div>
+        <div class="relative z-10 text-center max-w-4xl" data-aos="fade-up">
+            <p class="attribute-pill inline-block px-5 py-2 text-sm tracking-widest uppercase text-soft mb-6">Escola de Governo · Toledo-PR</p>
+            <img src="assets/brasao_toledo.png" alt="Brasão de Toledo" class="mx-auto mb-6 rounded-2xl" style="width:200px;filter:drop-shadow(0 0 30px var(--mira-glow-strong));">
+            <h1 class="text-6xl md:text-7xl font-black leading-tight mb-6">
+                Geoprocessamento na<br><span class="primary-color">gestão municipal</span>
+            </h1>
+            <p class="text-xl text-soft max-w-2xl mx-auto mb-8">Curso de 30 horas para servidores: do primeiro mapa ao banco de dados geográfico.</p>
+            <div class="flex flex-wrap items-center justify-center gap-3">
+                <span class="attribute-pill px-5 py-2 text-sm"><i data-lucide="calendar-days" class="inline w-4 h-4 mr-2 primary-color"></i>10 encontros</span>
+                <span class="attribute-pill px-5 py-2 text-sm"><i data-lucide="clock" class="inline w-4 h-4 mr-2 primary-color"></i>30 horas</span>
+                <span class="attribute-pill px-5 py-2 text-sm"><i data-lucide="map" class="inline w-4 h-4 mr-2 primary-color"></i>QGIS + PostGIS</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 2: CRONOGRAMA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 pt-3 pb-6">
+        <div class="w-full max-w-6xl" data-aos="fade-up">
+            <div class="text-center mb-2">
+                <h2 class="text-4xl md:text-5xl font-bold mb-2">Dez terças, <span class="primary-color italic">um mapa por vez</span></h2>
+                <p class="text-soft italic text-lg md:text-xl">De conceitos básicos a serviços web em 30 horas.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-1 md:p-2 relative">
+                <div class="flex items-center gap-3 mb-2 px-1">
+                    <div class="icon-hero" style="width:40px;height:40px;border-radius:10px;"><i data-lucide="calendar-days" class="w-5 h-5 primary-color"></i></div>
+                    <div><p class="font-bold text-sm">Cronograma do curso</p><p class="text-softer text-xs italic">Toda terça-feira, 8 de setembro a 10 de novembro, 3 horas por encontro.</p></div>
+                </div>
+                <button id="replay-crono" class="replay-btn" type="button">↻ replay</button>
+                <!-- @MIRA:SIZE 3/10 -->
+                <div class="anim-stage" id="crono-stage"><svg id="crono-svg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid meet"></svg></div>
+                <div class="border-t border-white/10 pt-1 mt-1 mb-1">
+                    <p class="text-xs uppercase tracking-[3px] text-softer text-center mb-1">Trilha do curso</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="lightbulb" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Conceitos</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="monitor" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">QGIS</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="database" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">PostGIS</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="globe" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Serviços OGC</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 3: QUATRO ETAPAS ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 pt-3 pb-6">
+        <div class="w-full max-w-6xl" data-aos="fade-up">
+            <div class="text-center mb-2">
+                <h2 class="text-4xl md:text-5xl font-bold mb-2">Quatro verbos que <span class="primary-color italic">movem o dado</span></h2>
+                <p class="text-soft italic text-lg md:text-xl">Coletar, tratar, analisar, representar.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-1 md:p-2 relative">
+                <div class="flex items-center gap-3 mb-2 px-1">
+                    <div class="icon-hero" style="width:40px;height:40px;border-radius:10px;"><i data-lucide="workflow" class="w-5 h-5 primary-color"></i></div>
+                    <div><p class="font-bold text-sm">O que é geoprocessamento</p><p class="text-softer text-xs italic">Técnicas e tecnologias para trabalhar dados espaciais.</p></div>
+                </div>
+                <button id="replay-etapas" class="replay-btn" type="button">↻ replay</button>
+                <!-- @MIRA:SIZE 3/10 -->
+                <div class="anim-stage" id="etapas-stage"><svg id="etapas-svg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid meet"></svg></div>
+                <div class="border-t border-white/10 pt-1 mt-1 mb-1">
+                    <p class="text-xs uppercase tracking-[3px] text-softer text-center mb-1">Cada etapa alimenta a próxima</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="satellite" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">GPS e satélite</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="filter" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Validar e padronizar</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="layers" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Sobrepor camadas</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="map" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Mapas e painéis</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 4: JOHN SNOW ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 pt-3 pb-6">
+        <div class="w-full max-w-6xl" data-aos="fade-up">
+            <div class="text-center mb-2">
+                <h2 class="text-4xl md:text-5xl font-bold mb-2">Um mapa que <span class="primary-color italic">fechou um poço</span></h2>
+                <p class="text-soft italic text-lg md:text-xl">Londres, 1854: 578 mortes por cólera viraram pontos num mapa.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-1 md:p-2 relative">
+                <div class="flex items-center gap-3 mb-2 px-1">
+                    <div class="icon-hero" style="width:40px;height:40px;border-radius:10px;"><i data-lucide="map-pin" class="w-5 h-5 primary-color"></i></div>
+                    <div><p class="font-bold text-sm">O mapa do médico John Snow</p><p class="text-softer text-xs italic">Snow não tinha microscópio. Tinha um mapa.</p></div>
+                </div>
+                <button id="replay-snow" class="replay-btn" type="button">↻ replay</button>
+                <!-- @MIRA:SIZE 3/10 -->
+                <div class="anim-stage" id="snow-stage">
+                    <img src="assets/john-snow.png" alt="Mapa de John Snow" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0.45;">
+                    <svg id="snow-svg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid meet" style="position:relative;"></svg>
+                </div>
+                <div class="border-t border-white/10 pt-1 mt-1 mb-1">
+                    <p class="text-xs uppercase tracking-[3px] text-softer text-center mb-1">A primeira análise espacial da história</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="skull" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">578 mortes mapeadas</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="droplets" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">1 poço contaminado</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="trending-down" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Mortes caem</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 5: SIG ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 pt-3 pb-6">
+        <div class="w-full max-w-6xl" data-aos="fade-up">
+            <div class="text-center mb-2">
+                <h2 class="text-4xl md:text-5xl font-bold mb-2">SIG: cinco peças, <span class="primary-color italic">uma decisão</span></h2>
+                <p class="text-soft italic text-lg md:text-xl">Programas, equipamentos, métodos, dados e pessoas produzindo geoinformação.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-1 md:p-2 relative">
+                <div class="flex items-center gap-3 mb-2 px-1">
+                    <div class="icon-hero" style="width:40px;height:40px;border-radius:10px;"><i data-lucide="puzzle" class="w-5 h-5 primary-color"></i></div>
+                    <div><p class="font-bold text-sm">Sistema de Informações Geográficas</p><p class="text-softer text-xs italic">Integração com um único objetivo: apoiar a tomada de decisão.</p></div>
+                </div>
+                <button id="replay-sig" class="replay-btn" type="button">↻ replay</button>
+                <!-- @MIRA:SIZE 3/10 -->
+                <div class="anim-stage" id="sig-stage"><svg id="sig-svg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid meet"></svg></div>
+                <div class="border-t border-white/10 pt-1 mt-1 mb-1">
+                    <p class="text-xs uppercase tracking-[3px] text-softer text-center mb-1">Do dado à decisão</p>
+                    <div class="flex flex-wrap items-center justify-center gap-3 py-1">
+                        <span class="attribute-pill px-5 py-2 text-sm"><i data-lucide="calendar-check" class="inline w-4 h-4 mr-2 primary-color"></i>Presença e nota pela Escola de Governo</span>
+                        <span class="attribute-pill px-5 py-2 text-sm primary-color font-semibold" style="border-color: var(--mira-icon-border);"><i data-lucide="rocket" class="inline w-4 h-4 mr-2"></i>No fim do curso, você produz geoinformação sozinho</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 7: BANCO NO CENTRO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 pt-3 pb-6">
+        <div class="w-full max-w-6xl" data-aos="fade-up">
+            <div class="text-center mb-2">
+                <h2 class="text-4xl md:text-5xl font-bold mb-2">O banco no <span class="primary-color italic">centro de tudo</span></h2>
+                <p class="text-soft italic text-lg md:text-xl">QGIS na tela, banco geográfico centralizando cada operação.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-1 md:p-2 relative">
+                <div class="flex items-center gap-3 mb-2 px-1">
+                    <div class="icon-hero" style="width:40px;height:40px;border-radius:10px;"><i data-lucide="database" class="w-5 h-5 primary-color"></i></div>
+                    <div><p class="font-bold text-sm">Fluxo QGIS + banco de dados geográfico</p><p class="text-softer text-xs italic">Inserir, integrar, consultar, analisar, visualizar e mapear.</p></div>
+                </div>
+                <button id="replay-hub" class="replay-btn" type="button">↻ replay</button>
+                <!-- @MIRA:SIZE 3/10 -->
+                <div class="anim-stage" id="hub-stage"><svg id="hub-svg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid meet"></svg></div>
+                <div class="border-t border-white/10 pt-1 mt-1 mb-1">
+                    <p class="text-xs uppercase tracking-[3px] text-softer text-center mb-1">O que a prefeitura ganha</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="database" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Um único banco</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="share-2" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Secretarias compartilham</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="users" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Vários usuários</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="globe" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Base do geoportal</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 9: LOTE 550 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 pt-3 pb-6">
+        <div class="w-full max-w-6xl" data-aos="fade-up">
+            <div class="text-center mb-2">
+                <h2 class="text-4xl md:text-5xl font-bold mb-2">Um lote, <span class="primary-color italic">três retratos</span></h2>
+                <p class="text-soft italic text-lg md:text-xl">Rua Primavera, 540 m², zona ZR4: cadastro, croqui e QGIS.</p>
+            </div>
+            <div id="lote-grid" class="grid md:grid-cols-3 gap-4">
+                <div class="lote glass-card p-4 transition-all duration-700">
+                    <img src="assets/lote-bci.png" alt="Cadastro imobiliário" class="w-full rounded-lg mb-3" style="height:260px;object-fit:cover;object-position:top;">
+                    <h3 class="text-xl font-bold mb-1">Cadastro (BCI)</h3>
+                    <p class="text-soft text-sm">Só números, sem desenho. Dimensões, testadas e zoneamento numa tela de formulário.</p>
+                </div>
+                <div class="lote glass-card p-4 transition-all duration-700">
+                    <img src="assets/lote-croqui.png" alt="Croqui em CAD" class="w-full rounded-lg mb-3" style="height:260px;object-fit:cover;background:#fff;">
+                    <h3 class="text-xl font-bold mb-1">Croqui CAD</h3>
+                    <p class="text-soft text-sm">Só desenho, sem dados. Medidas na linha, mas nenhum atributo consultável.</p>
+                </div>
+                <div class="lote glass-card p-4 transition-all duration-700" id="lote-qgis">
+                    <img src="assets/lote-qgis.png" alt="Quadra no QGIS" class="w-full rounded-lg mb-3" style="height:260px;object-fit:cover;background:#fff;">
+                    <h3 class="text-xl font-bold mb-1 primary-color">QGIS</h3>
+                    <p class="text-soft text-sm">Geometria e atributos juntos. Edificações, pavimentos e ano na mesma camada.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 11: AUTOCAD X QGIS ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 pt-3 pb-6">
+        <div class="w-full max-w-6xl" data-aos="fade-up">
+            <div class="text-center mb-2">
+                <h2 class="text-4xl md:text-5xl font-bold mb-2">Desenho ou <span class="primary-color italic">dado?</span></h2>
+                <p class="text-soft italic text-lg md:text-xl">Dez critérios separam o CAD do SIG.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-4 md:p-6 overflow-x-auto">
+                <table class="w-full text-left" id="cad-table">
+                    <thead>
+                        <tr class="text-xs uppercase tracking-widest text-softer border-b border-white/10">
+                            <th class="py-2 pr-4">Critério</th><th class="py-2 pr-4">AutoCAD</th><th class="py-2 primary-color">QGIS</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm md:text-base">
+                        <tr><td class="py-2 pr-4 font-semibold">Foco principal</td><td class="py-2 pr-4 text-soft">Desenho técnico e precisão geométrica</td><td class="py-2 qgis">Análise e gestão de dados geoespaciais</td></tr>
+                        <tr><td class="py-2 pr-4 font-semibold">Estrutura dos dados</td><td class="py-2 pr-4 text-soft">Gráfica: linhas, blocos, layers</td><td class="py-2 qgis">Geometria + atributos</td></tr>
+                        <tr><td class="py-2 pr-4 font-semibold">Banco de dados</td><td class="py-2 pr-4 text-soft">Não nativo</td><td class="py-2 qgis">Nativo: PostGIS, GeoPackage</td></tr>
+                        <tr><td class="py-2 pr-4 font-semibold">Consultas e filtros</td><td class="py-2 pr-4 text-soft">Muito limitado</td><td class="py-2 qgis">Expressões, combinações, SQL</td></tr>
+                        <tr><td class="py-2 pr-4 font-semibold">Análise espacial</td><td class="py-2 pr-4 text-soft">Não possui</td><td class="py-2 qgis">Buffer, interseção, análise</td></tr>
+                        <tr><td class="py-2 pr-4 font-semibold">Georreferenciamento</td><td class="py-2 pr-4 text-soft">Opcional</td><td class="py-2 qgis">Essencial</td></tr>
+                        <tr><td class="py-2 pr-4 font-semibold">Integração</td><td class="py-2 pr-4 text-soft">Limitada</td><td class="py-2 qgis">Bancos, APIs, raster, web</td></tr>
+                        <tr><td class="py-2 pr-4 font-semibold">Uso típico</td><td class="py-2 pr-4 text-soft">Engenharia e arquitetura (micro)</td><td class="py-2 qgis">Planejamento e território (macro)</td></tr>
+                        <tr><td class="py-2 pr-4 font-semibold">Automação e análise</td><td class="py-2 pr-4 text-soft">Baixa</td><td class="py-2 qgis">Alta</td></tr>
+                        <tr><td class="py-2 pr-4 font-semibold">Múltiplos usuários</td><td class="py-2 pr-4 text-soft">Não permite</td><td class="py-2 qgis">Permite</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 13: METAS E MOVIMENTOS ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 pt-3 pb-6">
+        <div class="w-full max-w-6xl" data-aos="fade-up">
+            <div class="text-center mb-2">
+                <h2 class="text-4xl md:text-5xl font-bold mb-2">Três metas, <span class="primary-color italic">cinco movimentos</span></h2>
+                <p class="text-soft italic text-lg md:text-xl">O que o curso quer e como a prefeitura chega lá.</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-4 mb-4">
+                <div class="glass-card p-5"><div class="icon-hero mb-3"><i data-lucide="graduation-cap" class="primary-color w-6 h-6"></i></div><h3 class="text-xl font-bold mb-1">Capacitar servidores</h3><p class="text-soft text-sm">Autonomia técnica e cultura de geotecnologia na gestão pública.</p></div>
+                <div class="glass-card p-5"><div class="icon-hero mb-3"><i data-lucide="monitor-check" class="primary-color w-6 h-6"></i></div><h3 class="text-xl font-bold mb-1">Implantar o QGIS</h3><p class="text-soft text-sm">Ferramenta de gestão territorial em cada departamento.</p></div>
+                <div class="glass-card p-5"><div class="icon-hero mb-3"><i data-lucide="folder-tree" class="primary-color w-6 h-6"></i></div><h3 class="text-xl font-bold mb-1">Estruturar os dados</h3><p class="text-soft text-sm">Consultas, análises, compartilhamento e relatórios.</p></div>
+            </div>
+            <div class="glass-card p-5">
+                <p class="text-xs uppercase tracking-[3px] text-softer mb-3">Cinco movimentos</p>
+                <div class="grid md:grid-cols-5 gap-2 mb-4">
+                    <div class="attribute-pill rounded-xl p-2 text-center text-sm"><i data-lucide="book-open" class="w-4 h-4 primary-color mx-auto mb-1"></i>Capacitar e atualizar</div>
+                    <div class="attribute-pill rounded-xl p-2 text-center text-sm"><i data-lucide="hard-drive" class="w-4 h-4 primary-color mx-auto mb-1"></i>Manter dados existentes (DRZ)</div>
+                    <div class="attribute-pill rounded-xl p-2 text-center text-sm"><i data-lucide="file-x" class="w-4 h-4 primary-color mx-auto mb-1"></i>Substituir planilhas e papéis</div>
+                    <div class="attribute-pill rounded-xl p-2 text-center text-sm"><i data-lucide="users" class="w-4 h-4 primary-color mx-auto mb-1"></i>Grupo técnico de governança</div>
+                    <div class="attribute-pill rounded-xl p-2 text-center text-sm"><i data-lucide="layers" class="w-4 h-4 primary-color mx-auto mb-1"></i>Implantar em fases</div>
+                </div>
+                <div id="fases" class="grid grid-cols-3 gap-3">
+                    <div><p class="text-sm font-semibold mb-1">1. Incorporar</p><div class="h-2 rounded-full" style="background:var(--mira-pill-bg);"><div class="fase h-2 rounded-full" style="width:0%;background:var(--mira-primary);transition:width 1.2s ease;"></div></div></div>
+                    <div><p class="text-sm font-semibold mb-1">2. Consolidar</p><div class="h-2 rounded-full" style="background:var(--mira-pill-bg);"><div class="fase h-2 rounded-full" style="width:0%;background:var(--mira-primary);transition:width 1.2s ease;"></div></div></div>
+                    <div><p class="text-sm font-semibold mb-1">3. Expandir</p><div class="h-2 rounded-full" style="background:var(--mira-pill-bg);"><div class="fase h-2 rounded-full" style="width:0%;background:var(--mira-primary);transition:width 1.2s ease;"></div></div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 15: VETOR OU RASTER ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 pt-3 pb-6">
+        <div class="w-full max-w-6xl" data-aos="fade-up">
+            <div class="text-center mb-2">
+                <h2 class="text-4xl md:text-5xl font-bold mb-2">Vetor ou <span class="primary-color italic">raster?</span></h2>
+                <p class="text-soft italic text-lg md:text-xl">Objetos discretos ou fenômenos contínuos.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-1 md:p-2 relative">
+                <div class="flex items-center gap-3 mb-2 px-1">
+                    <div class="icon-hero" style="width:40px;height:40px;border-radius:10px;"><i data-lucide="layers" class="w-5 h-5 primary-color"></i></div>
+                    <div><p class="font-bold text-sm">Representação de dados geográficos</p><p class="text-softer text-xs italic">A lupa mostra: o vetor não pixela, o raster escadinha.</p></div>
+                </div>
+                <button id="replay-vr" class="replay-btn" type="button">↻ replay</button>
+                <!-- @MIRA:SIZE 3/10 -->
+                <div class="anim-stage" id="vr-stage"><svg id="vr-svg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid meet"></svg></div>
+                <div class="border-t border-white/10 pt-1 mt-1 mb-1">
+                    <p class="text-xs uppercase tracking-[3px] text-softer text-center mb-1">Vetorização e rasterização convertem um no outro</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="pentagon" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Vetor: limites, ruas, lotes, infraestrutura</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="grid-3x3" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Raster: cobertura do solo, elevação, clima</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 16: GEOMETRIA E TABELA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 pt-3 pb-6">
+        <div class="w-full max-w-6xl" data-aos="fade-up">
+            <div class="text-center mb-2">
+                <h2 class="text-4xl md:text-5xl font-bold mb-2">Toda geometria tem <span class="primary-color italic">sua linha</span></h2>
+                <p class="text-soft italic text-lg md:text-xl">Um ID único liga o desenho ao dado. Esse é o SIG.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-1 md:p-2 relative">
+                <div class="flex items-center gap-3 mb-2 px-1">
+                    <div class="icon-hero" style="width:40px;height:40px;border-radius:10px;"><i data-lucide="link" class="w-5 h-5 primary-color"></i></div>
+                    <div><p class="font-bold text-sm">Geometrias vinculadas a tabelas de atributos</p><p class="text-softer text-xs italic">Ponto, linha e polígono, cada um com sua linha na tabela.</p></div>
+                </div>
+                <button id="replay-attr" class="replay-btn" type="button">↻ replay</button>
+                <!-- @MIRA:SIZE 3/10 -->
+                <div class="anim-stage" id="attr-stage"><svg id="attr-svg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid meet"></svg></div>
+                <div class="border-t border-white/10 pt-1 mt-1 mb-1">
+                    <p class="text-xs uppercase tracking-[3px] text-softer text-center mb-1">Resumo da aula</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="workflow" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Coletar, tratar, analisar, representar</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="puzzle" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">SIG integra e decide</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="database" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Banco no centro</p></div>
+                        <div class="attribute-pill text-center p-1 rounded-xl"><i data-lucide="calendar-days" class="w-4 h-4 primary-color mx-auto mb-1"></i><p class="text-sm font-semibold">Próxima aula: QGIS</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        AOS.init({ duration: 800, once: true });
+        lucide.createIcons();
+
+        const cssVar = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+        const PRIMARY = cssVar('--mira-primary');
+        const ACCENT2 = cssVar('--mira-accent-2');
+        const PRGBA = a => { const h = PRIMARY.replace('#', ''); return `rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${a})`; };
+        const SOFT = 'rgba(255,255,255,0.75)';
+        const FAINT = 'rgba(255,255,255,0.12)';
+        const GLOW = `drop-shadow(0 0 10px ${PRIMARY})`;
+        const gen = {};
+        function newGen(k) { gen[k] = (gen[k] || 0) + 1; return gen[k]; }
+        function alive(k, g) { return gen[k] === g; }
+        function fresh(id) { const s = d3.select('#' + id); s.selectAll('*').remove(); return s; }
+
+        // ===== CAPA: anéis de mapa expandindo + partículas orbitando (loop) =====
+        (function () {
+            const W = window.innerWidth, H = window.innerHeight;
+            const svg = d3.select('#capa-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const cx = W / 2, cy = H / 2 - 60;
+            function ring() {
+                svg.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 120).attr('fill', 'none')
+                    .attr('stroke', PRIMARY).attr('stroke-width', 1.5).attr('opacity', 0.5)
+                    .transition().duration(4000).ease(d3.easeCubicOut).attr('r', Math.max(W, H) * 0.55).attr('opacity', 0).remove();
+            }
+            ring(); d3.interval(ring, 1300);
+            const particles = d3.range(28).map(() => ({ r: 200 + Math.random() * Math.min(W, H) * 0.4, a: Math.random() * 6.28, s: 0.002 + Math.random() * 0.004, z: 1.5 + Math.random() * 3 }));
+            const dots = svg.selectAll('circle.p').data(particles).join('circle').attr('class', 'p').attr('r', d => d.z).attr('fill', PRIMARY).attr('opacity', 0.35);
+            d3.timer(() => dots.attr('cx', d => { d.a += d.s; return cx + Math.cos(d.a) * d.r; }).attr('cy', d => cy + Math.sin(d.a) * d.r * 0.6));
+        })();
+
+        // ===== CRONOGRAMA: serpentina de 8 encontros + cursor percorrendo (loop) =====
+        function animateCrono() {
+            const g = newGen('crono'), svg = fresh('crono-svg');
+            const DATAS = ['08/09', '15/09', '22/09', '29/09', '06/10', '13/10', '20/10', '27/10', '03/11', '10/11'];
+            const E = [['Entender', 'Conceitos e casos'], ['Abrir o QGIS', 'Interface e projetos'], ['Trocar arquivos', 'Shapefiles'], ['Desenhar', 'Pontos, linhas, polígonos'], ['Estilizar', 'Simbologia e rótulos'],
+                       ['Imprimir mapas', 'Compositor e temáticos'], ['Analisar', 'Buffer, dissolve, união'], ['Recortar', 'Intersecção e recorte'], ['Guardar', 'PostgreSQL e PostGIS'], ['Publicar', 'WMS, WFS, encerramento']];
+            const xs = [150, 395, 640, 885, 1130];
+            const pts = E.map((e, i) => ({ d: DATAS[i], t: e[0], s: e[1], x: i < 5 ? xs[i] : xs[9 - i], y: i < 5 ? 210 : 500 }));
+            const line = d3.line().x(d => d.x).y(d => d.y).curve(d3.curveMonotoneX);
+            const pathD = line(pts.slice(0, 5)) + ` L ${1130 + 70} 355 L ${pts[5].x} ${pts[5].y} ` + line(pts.slice(5)).replace('M', 'L');
+            const path = svg.append('path').attr('d', pathD).attr('fill', 'none').attr('stroke', FAINT).attr('stroke-width', 3);
+            const L = path.node().getTotalLength();
+            path.attr('stroke-dasharray', L).attr('stroke-dashoffset', L).transition().duration(2200).ease(d3.easeCubicInOut).attr('stroke-dashoffset', 0);
+            const n = svg.selectAll('g.n').data(pts).join('g').attr('class', 'n').attr('transform', d => `translate(${d.x},${d.y})`);
+            n.append('circle').attr('r', 0).attr('fill', 'rgba(255,255,255,0.06)').attr('stroke', PRIMARY).attr('stroke-width', 2.5)
+                .transition().delay((d, i) => 300 + i * 180).duration(500).ease(d3.easeBackOut).attr('r', 30);
+            n.append('text').text((d, i) => i + 1).attr('text-anchor', 'middle').attr('dy', 7).attr('fill', PRIMARY).attr('font-size', 20).attr('font-weight', 800).attr('opacity', 0).transition().delay((d, i) => 600 + i * 180).attr('opacity', 1);
+            n.append('text').text(d => d.d).attr('text-anchor', 'middle').attr('dy', -46).attr('fill', ACCENT2).attr('font-size', 15).attr('font-weight', 700).attr('opacity', 0).transition().delay((d, i) => 700 + i * 180).attr('opacity', 1);
+            n.append('text').text(d => d.t).attr('text-anchor', 'middle').attr('dy', 58).attr('fill', 'white').attr('font-size', 18).attr('font-weight', 700).attr('opacity', 0).transition().delay((d, i) => 750 + i * 180).attr('opacity', 1);
+            n.append('text').text(d => d.s).attr('text-anchor', 'middle').attr('dy', 80).attr('fill', SOFT).attr('font-size', 13).attr('opacity', 0).transition().delay((d, i) => 800 + i * 180).attr('opacity', 1);
+            const cur = svg.append('circle').attr('r', 9).attr('fill', PRIMARY).style('filter', GLOW).attr('opacity', 0);
+            function run() {
+                if (!alive('crono', g)) return;
+                cur.attr('opacity', 1).transition().duration(7000).ease(d3.easeLinear)
+                    .attrTween('transform', () => t => { const p = path.node().getPointAtLength(t * L); return `translate(${p.x},${p.y})`; })
+                    .on('end', () => { cur.attr('opacity', 0); setTimeout(run, 500); });
+            }
+            setTimeout(run, 2300);
+            d3.interval(() => { if (!alive('crono', g)) return; n.selectAll('circle').transition().delay((d, i) => i * 120).duration(300).attr('r', 36).transition().duration(300).attr('r', 30); }, 3000);
+        }
+
+        // ===== ETAPAS: 4 estágios + partículas fluindo (loop) =====
+        function animateEtapas() {
+            const g = newGen('etapas'), svg = fresh('etapas-svg');
+            const E = [['Coletar', 'GPS, satélite, mapas, tabelas'], ['Tratar', 'Organizar, corrigir, validar'], ['Analisar', 'Sobrepor, medir, densidade'], ['Representar', 'Mapas, painéis, geoportais']];
+            const xs = [190, 490, 790, 1090], cy = 330, w = 220, h = 150;
+            svg.append('line').attr('x1', xs[0]).attr('x2', xs[3]).attr('y1', cy).attr('y2', cy).attr('stroke', FAINT).attr('stroke-width', 3).attr('stroke-dasharray', '6 8');
+            const st = svg.selectAll('g.s').data(E).join('g').attr('class', 's').attr('transform', (d, i) => `translate(${xs[i] - 80},${cy})`).attr('opacity', 0);
+            st.append('rect').attr('x', -w / 2).attr('y', -h / 2).attr('width', w).attr('height', h).attr('rx', 18).attr('fill', 'rgba(255,255,255,0.05)').attr('stroke', PRIMARY).attr('stroke-width', 2);
+            st.append('text').text((d, i) => `0${i + 1}`).attr('text-anchor', 'middle').attr('dy', -28).attr('fill', ACCENT2).attr('font-size', 16).attr('font-weight', 700);
+            st.append('text').text(d => d[0]).attr('text-anchor', 'middle').attr('dy', 8).attr('fill', 'white').attr('font-size', 28).attr('font-weight', 800);
+            st.append('text').text(d => d[1]).attr('text-anchor', 'middle').attr('dy', 42).attr('fill', SOFT).attr('font-size', 14);
+            st.transition().delay((d, i) => 200 + i * 250).duration(600).ease(d3.easeBackOut.overshoot(1.1)).attr('opacity', 1).attr('transform', (d, i) => `translate(${xs[i]},${cy})`);
+            svg.append('text').text('Dados espaciais entram brutos e saem como geoinformação').attr('x', 640).attr('y', 560).attr('text-anchor', 'middle').attr('fill', SOFT).attr('font-size', 18).attr('font-style', 'italic').attr('opacity', 0).transition().delay(1400).attr('opacity', 1);
+            function spawn() {
+                if (!alive('etapas', g)) return;
+                const y = cy + (Math.random() - 0.5) * 60;
+                const p = svg.append('circle').attr('r', 5 + Math.random() * 4).attr('cx', xs[0] - w / 2).attr('cy', y).attr('fill', PRIMARY).attr('opacity', 0.9).style('filter', GLOW);
+                let t = p.transition().duration(0);
+                for (let i = 1; i < 4; i++) t = t.transition().duration(900).ease(d3.easeQuadInOut).attr('cx', xs[i]).attr('r', 5 + i * 2).attr('fill', i === 3 ? ACCENT2 : PRIMARY);
+                t.transition().duration(500).attr('cx', xs[3] + w / 2 + 40).attr('opacity', 0).remove();
+                setTimeout(spawn, 700);
+            }
+            setTimeout(spawn, 1300);
+            d3.interval(() => { if (!alive('etapas', g)) return; st.select('rect').transition().delay((d, i) => i * 900).duration(400).attr('stroke-width', 5).transition().duration(400).attr('stroke-width', 2); }, 3600);
+        }
+
+        // ===== JOHN SNOW: pontos acendem em ondas + poço pulsando (loop) =====
+        function animateSnow() {
+            const g = newGen('snow'), svg = fresh('snow-svg');
+            const cx = 640, cy = 360;
+            const pts = d3.range(140).map(() => { const a = Math.random() * 6.28, r = Math.pow(Math.random(), 0.7) * 260; return { x: cx + Math.cos(a) * r * 1.3, y: cy + Math.sin(a) * r * 0.8, d: r }; });
+            const dots = svg.selectAll('circle.m').data(pts).join('circle').attr('class', 'm').attr('cx', d => d.x).attr('cy', d => d.y).attr('r', 0).attr('fill', PRIMARY).attr('opacity', 0.85);
+            dots.transition().delay(d => 300 + d.d * 5).duration(400).ease(d3.easeBackOut).attr('r', 4.5);
+            const well = svg.append('g').attr('transform', `translate(${cx},${cy})`).attr('opacity', 0);
+            well.append('circle').attr('r', 16).attr('fill', 'black').attr('stroke', ACCENT2).attr('stroke-width', 4);
+            well.append('text').text('Poço da Broad Street').attr('dy', -30).attr('text-anchor', 'middle').attr('fill', ACCENT2).attr('font-size', 18).attr('font-weight', 800);
+            well.transition().delay(1900).duration(600).attr('opacity', 1);
+            svg.append('text').text('578 mortes').attr('x', 60).attr('y', 90).attr('fill', 'white').attr('font-size', 48).attr('font-weight', 900).attr('opacity', 0).transition().delay(1200).attr('opacity', 1);
+            svg.append('text').text('cada ponto, uma morte por cólera').attr('x', 60).attr('y', 125).attr('fill', SOFT).attr('font-size', 18).attr('opacity', 0).transition().delay(1400).attr('opacity', 1);
+            svg.append('text').text('Poço interditado, mortes caem').attr('x', 1220).attr('y', 660).attr('text-anchor', 'end').attr('fill', ACCENT2).attr('font-size', 22).attr('font-weight', 700).attr('opacity', 0).transition().delay(2600).attr('opacity', 1);
+            function pulse() {
+                if (!alive('snow', g)) return;
+                svg.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 16).attr('fill', 'none').attr('stroke', ACCENT2).attr('stroke-width', 3).attr('opacity', 0.9)
+                    .transition().duration(2200).ease(d3.easeCubicOut).attr('r', 320).attr('opacity', 0).remove();
+                dots.transition().delay(d => d.d * 6).duration(300).attr('r', 7).transition().duration(500).attr('r', 4.5);
+                setTimeout(pulse, 2400);
+            }
+            setTimeout(pulse, 2200);
+        }
+
+        // ===== SIG: cinco peças orbitam, encaixam e o centro respira (loop) =====
+        function animateSig() {
+            const g = newGen('sig'), svg = fresh('sig-svg');
+            const P = ['Programas', 'Equipamentos', 'Metodologias', 'Dados', 'Pessoas'];
+            const cx = 640, cy = 360, R = 230;
+            svg.append('circle').attr('cx', cx).attr('cy', cy).attr('r', R).attr('fill', 'none').attr('stroke', FAINT).attr('stroke-dasharray', '8 10').attr('class', 'ring');
+            const core = svg.append('g').attr('transform', `translate(${cx},${cy})`);
+            core.append('circle').attr('r', 0).attr('fill', 'rgba(255,255,255,0.05)').attr('stroke', PRIMARY).attr('stroke-width', 3).transition().duration(900).ease(d3.easeBackOut).attr('r', 95);
+            core.append('text').text('Geoinformação').attr('text-anchor', 'middle').attr('dy', -4).attr('fill', PRIMARY).attr('font-size', 22).attr('font-weight', 800).attr('opacity', 0).transition().delay(500).attr('opacity', 1);
+            core.append('text').text('para decidir').attr('text-anchor', 'middle').attr('dy', 24).attr('fill', SOFT).attr('font-size', 16).attr('opacity', 0).transition().delay(600).attr('opacity', 1);
+            const data = P.map((p, i) => ({ p, a: -Math.PI / 2 + i * 2 * Math.PI / 5 }));
+            const sats = svg.selectAll('g.sat').data(data).join('g').attr('class', 'sat').attr('transform', d => `translate(${cx + Math.cos(d.a) * 600},${cy + Math.sin(d.a) * 600})`).attr('opacity', 0);
+            sats.append('circle').attr('r', 58).attr('fill', 'rgba(255,255,255,0.06)').attr('stroke', PRIMARY).attr('stroke-opacity', 0.7).attr('stroke-width', 2);
+            sats.append('text').text(d => d.p).attr('text-anchor', 'middle').attr('dy', 5).attr('fill', 'white').attr('font-size', 15).attr('font-weight', 700);
+            sats.transition().delay((d, i) => 700 + i * 180).duration(900).ease(d3.easeBackOut.overshoot(1.2)).attr('opacity', 1).attr('transform', d => `translate(${cx + Math.cos(d.a) * R},${cy + Math.sin(d.a) * R})`);
+            const links = svg.selectAll('line.l').data(data).join('line').attr('class', 'l').attr('x1', cx).attr('y1', cy).attr('x2', cx).attr('y2', cy).attr('stroke', PRIMARY).attr('stroke-opacity', 0.35).attr('stroke-width', 2).lower();
+            links.transition().delay((d, i) => 900 + i * 180).duration(600).attr('x2', d => cx + Math.cos(d.a) * (R - 58)).attr('y2', d => cy + Math.sin(d.a) * (R - 58));
+            let off = 0, k = 0;
+            d3.timer(() => { if (!alive('sig', g)) return true; off -= 0.4; svg.select('.ring').attr('stroke-dashoffset', off); });
+            d3.interval(() => { if (!alive('sig', g)) return; core.select('circle').transition().duration(1200).attr('r', 105).transition().duration(1200).attr('r', 95); }, 2400);
+            d3.interval(() => {
+                if (!alive('sig', g)) return; const i = k++ % 5;
+                sats.filter((d, j) => j === i).select('circle').transition().duration(350).attr('stroke-width', 5).attr('fill', PRGBA(0.15)).transition().delay(300).duration(400).attr('stroke-width', 2).attr('fill', 'rgba(255,255,255,0.06)');
+                const d = data[i], p = svg.append('circle').attr('r', 6).attr('fill', ACCENT2).style('filter', GLOW).attr('cx', cx + Math.cos(d.a) * (R - 58)).attr('cy', cy + Math.sin(d.a) * (R - 58));
+                p.transition().duration(700).ease(d3.easeQuadIn).attr('cx', cx).attr('cy', cy).attr('opacity', 0).remove();
+            }, 800);
+        }
+
+        // ===== HUB: banco no centro, pacotes ida e volta (loop) =====
+        function animateHub() {
+            const g = newGen('hub'), svg = fresh('hub-svg');
+            const S = ['Inserir', 'Integrar', 'Consultar', 'Analisar', 'Visualizar', 'Mapear'];
+            const cx = 640, cy = 360, R = 250;
+            const data = S.map((s, i) => ({ s, a: -Math.PI / 2 + i * Math.PI / 3 })).map(d => ({ ...d, x: cx + Math.cos(d.a) * R, y: cy + Math.sin(d.a) * R * 0.85 }));
+            svg.selectAll('line').data(data).join('line').attr('x1', cx).attr('y1', cy).attr('x2', cx).attr('y2', cy).attr('stroke', FAINT).attr('stroke-width', 2)
+                .transition().delay((d, i) => 600 + i * 120).duration(500).attr('x2', d => d.x).attr('y2', d => d.y);
+            const hub = svg.append('g').attr('transform', `translate(${cx},${cy})`).attr('opacity', 0);
+            hub.append('rect').attr('x', -85).attr('y', -60).attr('width', 170).attr('height', 120).attr('rx', 22).attr('fill', 'rgba(255,255,255,0.06)').attr('stroke', PRIMARY).attr('stroke-width', 3);
+            hub.append('text').text('Banco').attr('text-anchor', 'middle').attr('dy', -8).attr('fill', PRIMARY).attr('font-size', 26).attr('font-weight', 900);
+            hub.append('text').text('geográfico').attr('text-anchor', 'middle').attr('dy', 22).attr('fill', 'white').attr('font-size', 18).attr('font-weight', 600);
+            hub.transition().duration(700).ease(d3.easeBackOut).attr('opacity', 1);
+            const sats = svg.selectAll('g.s').data(data).join('g').attr('class', 's').attr('transform', d => `translate(${d.x},${d.y})`).attr('opacity', 0);
+            sats.append('circle').attr('r', 50).attr('fill', 'rgba(255,255,255,0.05)').attr('stroke', PRIMARY).attr('stroke-opacity', 0.6).attr('stroke-width', 2);
+            sats.append('text').text(d => d.s).attr('text-anchor', 'middle').attr('dy', 6).attr('fill', 'white').attr('font-size', 16).attr('font-weight', 700);
+            sats.transition().delay((d, i) => 800 + i * 120).duration(500).ease(d3.easeBackOut).attr('opacity', 1);
+            svg.append('text').text('QGIS').attr('x', 60).attr('y', 660).attr('fill', ACCENT2).attr('font-size', 22).attr('font-weight', 800).attr('opacity', 0).transition().delay(1600).attr('opacity', 1);
+            svg.append('text').text('a interface por onde tudo acontece').attr('x', 130).attr('y', 660).attr('fill', SOFT).attr('font-size', 16).attr('opacity', 0).transition().delay(1700).attr('opacity', 1);
+            let k = 0;
+            d3.interval(() => {
+                if (!alive('hub', g)) return; const d = data[k++ % 6], out = k % 2 === 0;
+                const p = svg.append('circle').attr('r', 7).attr('fill', out ? ACCENT2 : PRIMARY).style('filter', GLOW)
+                    .attr('cx', out ? cx : d.x).attr('cy', out ? cy : d.y);
+                p.transition().duration(1100).ease(d3.easeQuadInOut).attr('cx', out ? d.x : cx).attr('cy', out ? d.y : cy).transition().duration(200).attr('opacity', 0).remove();
+                sats.filter((q, i) => q === d).select('circle').transition().delay(out ? 1000 : 0).duration(300).attr('r', 56).transition().duration(300).attr('r', 50);
+            }, 450);
+            d3.interval(() => { if (!alive('hub', g)) return; hub.select('rect').transition().duration(900).attr('stroke-width', 6).transition().duration(900).attr('stroke-width', 3); }, 1800);
+        }
+
+        // ===== LOTE: spotlight rotativo, QGIS respira (loop) =====
+        function animateLote() {
+            const g = newGen('lote'), cards = Array.from(document.querySelectorAll('#lote-grid .lote'));
+            cards.forEach((el, i) => { el.style.opacity = 0; el.style.transform = 'translateX(-40px)'; setTimeout(() => { el.style.opacity = 1; el.style.transform = 'none'; }, 200 + i * 250); });
+            let k = 0;
+            const iv = setInterval(() => {
+                if (!alive('lote', g)) return clearInterval(iv);
+                cards.forEach(c => { c.style.transform = 'none'; c.style.boxShadow = ''; c.style.borderColor = ''; });
+                const el = cards[k++ % 3];
+                el.style.transform = 'translateY(-8px) scale(1.02)'; el.style.boxShadow = '0 20px 50px var(--mira-glow-strong)'; el.style.borderColor = 'var(--mira-icon-border)';
+            }, 2200);
+        }
+
+        // ===== TABELA: realce varrendo a coluna QGIS (loop) =====
+        function animateTabela() {
+            const g = newGen('tab'), rows = Array.from(document.querySelectorAll('#cad-table tbody tr'));
+            rows.forEach((r, i) => { r.style.opacity = 0; r.style.transform = i % 2 ? 'translateX(30px)' : 'translateX(-30px)'; r.style.transition = 'all .5s ease'; setTimeout(() => { r.style.opacity = 1; r.style.transform = 'none'; }, 100 + i * 90); });
+            let k = 0;
+            const iv = setInterval(() => {
+                if (!alive('tab', g)) return clearInterval(iv);
+                rows.forEach(r => { r.querySelector('.qgis').style.color = ''; r.querySelector('.qgis').style.textShadow = ''; r.style.background = ''; });
+                const r = rows[k++ % rows.length], c = r.querySelector('.qgis');
+                c.style.color = 'var(--mira-primary)'; c.style.textShadow = '0 0 14px var(--mira-glow-strong)'; r.style.background = 'var(--mira-pill-bg)';
+            }, 700);
+        }
+
+        // ===== FASES: barras preenchendo em ciclo (loop) =====
+        function animateFases() {
+            const g = newGen('fases'), bars = Array.from(document.querySelectorAll('#fases .fase'));
+            function cycle() {
+                if (!alive('fases', g)) return;
+                bars.forEach(b => b.style.width = '0%');
+                bars.forEach((b, i) => setTimeout(() => { if (alive('fases', g)) b.style.width = '100%'; }, 300 + i * 1300));
+                setTimeout(cycle, 5200);
+            }
+            cycle();
+        }
+
+        // ===== VETOR X RASTER: lupa passeando (loop) =====
+        function animateVr() {
+            const g = newGen('vr'), svg = fresh('vr-svg');
+            const defs = svg.append('defs'); defs.append('clipPath').attr('id', 'vr-clip').append('circle').attr('id', 'vr-clipc').attr('r', 95);
+            const poly = '380,140 470,175 500,300 430,420 300,400 230,290 260,190';
+            const poly2 = poly.split(' ').map(p => p.split(',').map(Number));
+            const left = svg.append('g').attr('opacity', 0), right = svg.append('g').attr('opacity', 0);
+            left.append('text').text('VETOR').attr('x', 340).attr('y', 70).attr('text-anchor', 'middle').attr('fill', PRIMARY).attr('font-size', 26).attr('font-weight', 900);
+            left.append('text').text('geometria por coordenadas').attr('x', 340).attr('y', 98).attr('text-anchor', 'middle').attr('fill', SOFT).attr('font-size', 14);
+            left.append('polygon').attr('points', poly).attr('fill', PRGBA(0.15)).attr('stroke', PRIMARY).attr('stroke-width', 3);
+            poly2.forEach(p => left.append('circle').attr('cx', p[0]).attr('cy', p[1]).attr('r', 5).attr('fill', ACCENT2));
+            left.append('text').text('Zoom infinito, sem perda').attr('x', 340).attr('y', 520).attr('text-anchor', 'middle').attr('fill', 'white').attr('font-size', 18).attr('font-weight', 700);
+            const cell = 30, gx = 720, gy = 120;
+            const vals = d3.range(12).map(r => d3.range(14).map(c => (Math.sin(r * 0.6 + c * 0.4) > 0.3 ? 0.75 : Math.abs(c - r) < 2 ? 0.35 : 0.12)));
+            right.append('text').text('RASTER').attr('x', 940).attr('y', 70).attr('text-anchor', 'middle').attr('fill', PRIMARY).attr('font-size', 26).attr('font-weight', 900);
+            right.append('text').text('células com valores').attr('x', 940).attr('y', 98).attr('text-anchor', 'middle').attr('fill', SOFT).attr('font-size', 14);
+            vals.forEach((row, r) => row.forEach((v, c) => right.append('rect').attr('x', gx + c * cell).attr('y', gy + r * cell).attr('width', cell - 1).attr('height', cell - 1).attr('fill', PRIMARY).attr('opacity', v)));
+            right.append('text').text('Perde resolução ao aproximar').attr('x', 940).attr('y', 520).attr('text-anchor', 'middle').attr('fill', 'white').attr('font-size', 18).attr('font-weight', 700);
+            left.transition().delay(200).duration(700).attr('opacity', 1); right.transition().delay(600).duration(700).attr('opacity', 1);
+            svg.append('line').attr('x1', 640).attr('x2', 640).attr('y1', 60).attr('y2', 560).attr('stroke', FAINT).attr('stroke-dasharray', '6 8');
+            svg.append('text').text('vetorização  ◀  ▶  rasterização').attr('x', 640).attr('y', 640).attr('text-anchor', 'middle').attr('fill', SOFT).attr('font-size', 16).attr('opacity', 0).transition().delay(1200).attr('opacity', 1);
+            // lupa: conteúdo ampliado 2x sob clip
+            const lens = svg.append('g').attr('opacity', 0), zoom = lens.append('g').attr('clip-path', 'url(#vr-clip)');
+            const zl = zoom.append('g'), zr = zoom.append('g');
+            zl.append('polygon').attr('points', poly).attr('fill', PRGBA(0.2)).attr('stroke', PRIMARY).attr('stroke-width', 2.5);
+            vals.forEach((row, r) => row.forEach((v, c) => zr.append('rect').attr('x', gx + c * cell).attr('y', gy + r * cell).attr('width', cell - 1).attr('height', cell - 1).attr('fill', PRIMARY).attr('opacity', v)));
+            const ring = lens.append('circle').attr('r', 95).attr('fill', 'none').attr('stroke', ACCENT2).attr('stroke-width', 5).style('filter', GLOW);
+            lens.append('line').attr('x1', 68).attr('y1', 68).attr('x2', 130).attr('y2', 130).attr('stroke', ACCENT2).attr('stroke-width', 12).attr('stroke-linecap', 'round');
+            const lx = 340, rx = 940, ly = 300;
+            function setLens(x, y) {
+                lens.attr('transform', `translate(${x},${y})`); d3.select('#vr-clipc').attr('cx', 0).attr('cy', 0);
+                const side = x < 640 ? 'l' : 'r', Z = 2.4;
+                zl.attr('transform', `translate(${-x * Z},${-y * Z}) scale(${Z})`).attr('opacity', side === 'l' ? 1 : 0);
+                zr.attr('transform', `translate(${-x * Z},${-y * Z}) scale(${Z})`).attr('opacity', side === 'r' ? 1 : 0);
+            }
+            const T0 = Date.now() + 1500, CYC = 6000;
+            d3.timer(() => {
+                if (!alive('vr', g)) return true;
+                const e = Date.now() - T0; if (e < 0) return;
+                const ph = (e % CYC) / CYC, half = ph < 0.5, u = (ph % 0.5) / 0.5;
+                const fade = u < 0.08 ? u / 0.08 : u > 0.92 ? (1 - u) / 0.08 : 1;
+                const base = half ? lx : rx, x = base - 90 + u * 180, y = ly + Math.sin(u * Math.PI) * 60;
+                lens.attr('opacity', fade); setLens(x, y);
+            });
+        }
+
+        // ===== ATRIBUTOS: geometria ligada à linha da tabela (loop) =====
+        function animateAttr() {
+            const g = newGen('attr'), svg = fresh('attr-svg');
+            const map = svg.append('g');
+            map.append('rect').attr('x', 60).attr('y', 90).attr('width', 520).attr('height', 500).attr('rx', 18).attr('fill', 'rgba(255,255,255,0.03)').attr('stroke', FAINT);
+            map.append('text').text('Mapa').attr('x', 320).attr('y', 70).attr('text-anchor', 'middle').attr('fill', SOFT).attr('font-size', 14).attr('letter-spacing', 3);
+            const G = [
+                { id: 1, tipo: 'Ponto', nome: 'Escola', attr: 'Educação · 350 alunos', ax: 200, ay: 200 },
+                { id: 2, tipo: 'Linha', nome: 'Av. Central', attr: 'Avenida · 5,2 km', ax: 320, ay: 380 },
+                { id: 3, tipo: 'Polígono', nome: 'Bairro Centro', attr: 'Urbano · 245 ha', ax: 420, ay: 500 }];
+            const shapes = [
+                map.append('g').call(s => { s.append('circle').attr('cx', 200).attr('cy', 200).attr('r', 0).attr('fill', PRIMARY).transition().delay(300).duration(500).ease(d3.easeBackOut).attr('r', 14); }),
+                map.append('g').call(s => { const p = s.append('path').attr('d', 'M90,330 L250,360 L400,420 L560,440').attr('fill', 'none').attr('stroke', PRIMARY).attr('stroke-width', 6).attr('stroke-linecap', 'round'); const L = p.node().getTotalLength(); p.attr('stroke-dasharray', L).attr('stroke-dashoffset', L).transition().delay(600).duration(900).attr('stroke-dashoffset', 0); }),
+                map.append('g').call(s => { s.append('polygon').attr('points', '330,460 520,470 540,570 350,575').attr('fill', PRGBA(0.2)).attr('stroke', PRIMARY).attr('stroke-width', 3).attr('opacity', 0).transition().delay(1100).duration(600).attr('opacity', 1); })];
+            const tx = 700, ty = 120, rh = 110;
+            svg.append('text').text('Tabela de atributos').attr('x', 990).attr('y', 70).attr('text-anchor', 'middle').attr('fill', SOFT).attr('font-size', 14).attr('letter-spacing', 3);
+            const cols = ['ID', 'Tipo', 'Nome', 'Atributos'], cw = [60, 110, 170, 220];
+            let x0 = tx; cols.forEach((c, i) => { svg.append('text').text(c).attr('x', x0 + 12).attr('y', ty - 10).attr('fill', ACCENT2).attr('font-size', 13).attr('font-weight', 700); x0 += cw[i]; });
+            const rows = svg.selectAll('g.r').data(G).join('g').attr('class', 'r').attr('transform', (d, i) => `translate(${tx + 60},${ty + i * rh})`).attr('opacity', 0);
+            rows.append('rect').attr('width', 560).attr('height', rh - 14).attr('rx', 12).attr('fill', 'rgba(255,255,255,0.04)').attr('stroke', FAINT);
+            rows.each(function (d) { let x = 0; const r = d3.select(this); [d.id, d.tipo, d.nome, d.attr].forEach((v, i) => { r.append('text').text(v).attr('x', x + 12).attr('y', rh / 2 - 2).attr('fill', i === 0 ? PRIMARY : 'white').attr('font-size', i === 0 ? 24 : 16).attr('font-weight', i < 3 ? 800 : 400); x += cw[i]; }); });
+            rows.transition().delay((d, i) => 500 + i * 300).duration(500).attr('transform', (d, i) => `translate(${tx},${ty + i * rh})`).attr('opacity', 1);
+            const link = svg.append('path').attr('fill', 'none').attr('stroke', ACCENT2).attr('stroke-width', 3).attr('stroke-dasharray', '8 6').style('filter', GLOW).attr('opacity', 0);
+            const tag = svg.append('g').attr('opacity', 0); tag.append('circle').attr('r', 20).attr('fill', 'black').attr('stroke', ACCENT2).attr('stroke-width', 3); const tagT = tag.append('text').attr('text-anchor', 'middle').attr('dy', 7).attr('fill', ACCENT2).attr('font-size', 18).attr('font-weight', 900);
+            svg.append('text').text('ID único conecta cada geometria à sua linha').attr('x', 640).attr('y', 670).attr('text-anchor', 'middle').attr('fill', SOFT).attr('font-size', 17).attr('font-style', 'italic').attr('opacity', 0).transition().delay(2000).attr('opacity', 1);
+            let k = 0;
+            function rot() {
+                if (!alive('attr', g)) return; const i = k++ % 3, d = G[i], y = ty + i * rh + (rh - 14) / 2;
+                rows.select('rect').attr('stroke', FAINT).attr('fill', 'rgba(255,255,255,0.04)');
+                rows.filter((q, j) => j === i).select('rect').attr('stroke', ACCENT2).attr('fill', PRGBA(0.12));
+                shapes.forEach((s, j) => s.transition().duration(300).attr('opacity', j === i ? 1 : 0.35));
+                const p = `M${d.ax},${d.ay} C${d.ax + 200},${d.ay} ${tx - 150},${y} ${tx},${y}`;
+                link.attr('d', p).attr('opacity', 1); const L = link.node().getTotalLength();
+                link.attr('stroke-dasharray', L).attr('stroke-dashoffset', L).transition().duration(900).ease(d3.easeCubicOut).attr('stroke-dashoffset', 0).on('end', () => link.attr('stroke-dasharray', '8 6'));
+                tag.attr('opacity', 1).attr('transform', `translate(${d.ax},${d.ay})`); tagT.text(d.id);
+                tag.transition().duration(900).ease(d3.easeCubicOut).attr('transform', `translate(${tx},${y})`).transition().duration(400).attr('opacity', 0);
+                setTimeout(rot, 2200);
+            }
+            setTimeout(rot, 1800);
+        }
+
+        // ===== TRIGGERS: dispara ao entrar no viewport, rearma ao sair, replay manual =====
+        (function setupAnimationTriggers() {
+            const stages = [
+                { stage: document.getElementById('crono-stage'), fn: animateCrono, replay: 'replay-crono' },
+                { stage: document.getElementById('etapas-stage'), fn: animateEtapas, replay: 'replay-etapas' },
+                { stage: document.getElementById('snow-stage'), fn: animateSnow, replay: 'replay-snow' },
+                { stage: document.getElementById('sig-stage'), fn: animateSig, replay: 'replay-sig' },
+                { stage: document.getElementById('hub-stage'), fn: animateHub, replay: 'replay-hub' },
+                { stage: document.getElementById('lote-grid'), fn: animateLote },
+                { stage: document.getElementById('cad-table'), fn: animateTabela },
+                { stage: document.getElementById('fases'), fn: animateFases },
+                { stage: document.getElementById('vr-stage'), fn: animateVr, replay: 'replay-vr' },
+                { stage: document.getElementById('attr-stage'), fn: animateAttr, replay: 'replay-attr' }
+            ].filter(s => s.stage);
+            const io = new IntersectionObserver(entries => entries.forEach(e => {
+                const s = stages.find(x => x.stage === e.target); if (!s) return;
+                if (e.isIntersecting && !s.on) { s.on = true; s.fn(); }
+                else if (!e.isIntersecting && s.on) { s.on = false; }
+            }), { threshold: 0.35 });
+            stages.forEach(s => { io.observe(s.stage); if (s.replay) document.getElementById(s.replay).addEventListener('click', s.fn); });
+        })();
+
+        // === CONTROLES DE SLIDE: navegação card-a-card (progresso + botão + teclado) ===
+        (function () {
+            const cardSections = Array.from(document.querySelectorAll('body > section'));
+            if (cardSections.length === 0) return;
+
+            const progress = document.getElementById('mira-progress');
+            const nextBtn = document.getElementById('mira-next');
+            const nextIcon = document.getElementById('mira-next-icon');
+
+            const atBottom = () =>
+                (window.scrollY + window.innerHeight) >= (document.documentElement.scrollHeight - 100);
+
+            function currentIndex() {
+                const y = window.scrollY + window.innerHeight * 0.3;
+                let idx = -1;
+                for (let i = 0; i < cardSections.length; i++) {
+                    if (cardSections[i].offsetTop <= y) idx = i;
+                }
+                return idx;
+            }
+
+            function goTo(i) {
+                const idx = Math.max(0, Math.min(cardSections.length - 1, i));
+                cardSections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            window.addEventListener('scroll', () => {
+                const docH = document.documentElement.scrollHeight - window.innerHeight;
+                progress.style.width = (docH > 0 ? (window.scrollY / docH) * 100 : 0) + '%';
+                nextBtn.classList.toggle('visible', window.scrollY > 300);
+                nextIcon.setAttribute('data-lucide', atBottom() ? 'chevron-up' : 'chevron-down');
+                lucide.createIcons();
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (atBottom()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+                goTo(currentIndex() + 1);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key)) {
+                    e.preventDefault();
+                    goTo(currentIndex() + 1);
+                } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+                    e.preventDefault();
+                    const idx = currentIndex();
+                    if (idx <= 0) window.scrollTo({ top: 0, behavior: 'smooth' });
+                    else goTo(idx - 1);
+                } else if (e.key === 'Home') {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (e.key === 'End') {
+                    e.preventDefault();
+                    goTo(cardSections.length - 1);
+                } else if (e.key.toLowerCase() === 'f') {
+                    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                    else document.exitFullscreen();
+                }
+            });
+        })();
+    </script>
+
+    <!-- Modo edição (reordenar slides): tecla E ou ?edit=1 -->
+    <script src="mira/mira-edit.js" defer></script>
+    <!-- Edição livre estilo Canva (mover/redimensionar/rotacionar/duplicar/excluir/texto): tecla E -->
+    <script src="mira/mira-edit-free.js" defer></script>
+    <!-- mira-draw (desenhar sobre o slide): tecla P ou ?draw=1 -->
+    <script src="mira/mira-draw.js" defer></script>
+</body>
+
+</html>
