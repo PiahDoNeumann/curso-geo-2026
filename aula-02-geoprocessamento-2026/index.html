@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Aula 02: Shapefiles, Simbologia e Coleta de Dados</title>
+    <script src="assets/vendor/tailwind.js"></script>
+    <link href="assets/vendor/aos.css" rel="stylesheet">
+    <script src="assets/vendor/aos.js"></script>
+    <script src="assets/vendor/lucide.js"></script>
+    <script src="assets/vendor/d3.v7.min.js"></script>
+    <link href="assets/vendor/inter.css" rel="stylesheet">
+    <style>
+        /* @MIRA:THEME:START */
+/* MIRA THEME: mira-dark (padrão)
+   Identidade classica do canal: fundo preto, laranja vibrante,
+   glassmorphism no estilo classico do canal. */
+:root {
+    --mira-primary: #FF904D;
+    --mira-crop: #35D07F;
+    --mira-bg: #000000;
+    --mira-text: #ffffff;
+    --mira-text-soft: rgba(255, 255, 255, 0.70);
+    --mira-text-softer: rgba(255, 255, 255, 0.50);
+    --mira-card-bg: rgba(255, 255, 255, 0.05);
+    --mira-card-border: rgba(255, 255, 255, 0.10);
+    --mira-glow-soft: rgba(255, 144, 77, 0.15);
+    --mira-glow-strong: rgba(255, 144, 77, 0.25);
+    --mira-icon-bg: rgba(255, 144, 77, 0.15);
+    --mira-icon-border: rgba(255, 144, 77, 0.30);
+    --mira-pill-bg: rgba(255, 255, 255, 0.04);
+    --mira-pill-border: rgba(255, 255, 255, 0.08);
+    --mira-stage-glow: rgba(255, 144, 77, 0.06);
+    --mira-accent-2: #FFC766;
+}
+
+
+/* ============================================================
+   MIRA — base.css
+   Estrutura compartilhada por todos os temas.
+   Os temas definem apenas as CSS variables (--mira-*).
+   ============================================================ */
+
+body {
+    background: var(--mira-bg);
+    min-height: 100vh;
+    color: var(--mira-text);
+    font-family: 'Inter', sans-serif;
+}
+
+.primary-color { color: var(--mira-primary); }
+.primary-bg { background: var(--mira-primary); }
+
+.glass-card {
+    background: var(--mira-card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--mira-card-border);
+    box-shadow: 0 10px 30px var(--mira-glow-soft);
+    transition: all 0.3s ease;
+    border-radius: 0.75rem;
+}
+
+.glass-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px var(--mira-glow-strong);
+}
+
+.icon-hero {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    background: var(--mira-icon-bg);
+    border: 1px solid var(--mira-icon-border);
+}
+
+.attribute-pill {
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    transition: all 0.25s ease;
+    border-radius: 9999px;
+}
+
+.attribute-pill:hover {
+    background: var(--mira-icon-bg);
+    border-color: var(--mira-icon-border);
+    transform: translateY(-3px);
+}
+
+/* Palco de animação D3 — tamanho padrão do canvas */
+.anim-stage {
+    width: 100%;
+    height: clamp(400px, 60vh, 620px);
+    background: radial-gradient(circle at 50% 50%, var(--mira-stage-glow), transparent 70%);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.anim-stage svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.replay-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    color: var(--mira-text-soft);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.replay-btn:hover {
+    background: var(--mira-icon-bg);
+    color: var(--mira-primary);
+}
+
+.text-soft { color: var(--mira-text-soft); }
+.text-softer { color: var(--mira-text-softer); }
+
+@keyframes mira-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+@keyframes mira-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes mira-gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* @MIRA:THEME:END */
+
+        /* Imagem de conteudo do slide: nunca estoura a altura da tela no projetor. */
+        img.slide-img { max-height: 56vh; width: auto; max-width: 100%; margin-inline: auto; object-fit: contain; display: block; }
+        img.slide-img-sm { max-height: 34vh; }
+
+        /* Fonte maior para leitura em projecao de sala de aula (pedido do usuario, 14/09/2026):
+           sobe a base rem em 12%, o que escala junto todas as classes text-* do Tailwind
+           mantendo a hierarquia e as proporcoes do tema original. */
+        html { font-size: 112%; }
+
+        /* Bloco de codigo (card_code) */
+        .code-block {
+            background: rgba(0,0,0,0.45);
+            border: 1px solid var(--mira-card-border);
+            border-radius: 0.75rem;
+            padding: 1.75rem;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            line-height: 1.7;
+            overflow-x: auto;
+            white-space: pre;
+        }
+        .code-key { color: var(--mira-accent-2); }
+        .code-str { color: #9fd6a3; }
+        .code-num { color: var(--mira-primary); }
+        .code-punc { color: rgba(255,255,255,0.45); }
+
+        /* Diretriz de titulo da capa (CLAUDE.md): quebra equilibrada so no primeiro slide */
+        body > section:first-of-type h1,
+        body > section:first-of-type h2 { text-wrap: balance; }
+
+        /* === CONTROLES DE SLIDE (passagem card-a-card) === */
+        html { scroll-behavior: smooth; }
+        html { scrollbar-width: thin; scrollbar-color: #2e2e2e #0d0d0d; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; background: #0d0d0d; }
+        ::-webkit-scrollbar-track { background: #0d0d0d; }
+        ::-webkit-scrollbar-thumb { background: #2e2e2e; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+        ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+
+        #mira-progress {
+            position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+            background: linear-gradient(90deg, var(--mira-primary), var(--mira-accent-2), var(--mira-primary));
+            background-size: 200% 100%;
+            animation: mira-shimmer 2s linear infinite;
+            z-index: 9999; transition: width 0.1s linear;
+            box-shadow: 0 0 10px var(--mira-glow-strong);
+        }
+
+        @keyframes mira-shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+
+        #mira-next {
+            position: fixed; bottom: 32px; right: 32px;
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--mira-primary); color: var(--mira-bg);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: none;
+            opacity: 0; transform: translateY(20px);
+            transition: all 0.3s ease; z-index: 9998;
+            box-shadow: 0 4px 20px var(--mira-glow-strong);
+        }
+        #mira-next.visible { opacity: 1; transform: translateY(0); }
+        #mira-next:hover { transform: translateY(-3px) scale(1.1); }
+
+/* @MIRA:RESPONSIVE:START */
+/* ============================================================
+   MIRA — responsive.css  (camada de reflow mobile-first)
+   ============================================================ */
+
+html, body { max-width: 100%; overflow-x: hidden; }
+img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
+
+@media (max-width: 640px) {
+  .text-9xl { font-size: clamp(3rem, 12vw, 5rem)      !important; line-height: 1.05 !important; }
+  .text-8xl { font-size: clamp(2.75rem, 11vw, 4.5rem) !important; line-height: 1.06 !important; }
+  .text-7xl { font-size: clamp(2.25rem, 10vw, 3.75rem)!important; line-height: 1.08 !important; }
+  .text-6xl { font-size: clamp(2rem, 9vw, 3rem)       !important; line-height: 1.1  !important; }
+  .text-5xl { font-size: clamp(1.75rem, 8vw, 2.5rem)  !important; line-height: 1.12 !important; }
+  .text-4xl { font-size: clamp(1.5rem, 7vw, 2rem)     !important; line-height: 1.15 !important; }
+  .text-3xl { font-size: clamp(1.35rem, 6vw, 1.75rem) !important; line-height: 1.2  !important; }
+  .text-2xl { font-size: clamp(1.2rem, 5vw, 1.5rem)   !important; line-height: 1.25 !important; }
+  .text-xl  { font-size: clamp(1.05rem, 4.5vw, 1.25rem)!important; line-height: 1.3 !important; }
+
+  h1, h2, h3 { overflow-wrap: break-word; }
+
+  .p-12 { padding: 1.25rem !important; }
+  .p-10 { padding: 1.15rem !important; }
+  .p-8  { padding: 1.05rem !important; }
+  .px-12, .px-10 { padding-left: 1.15rem !important; padding-right: 1.15rem !important; }
+  .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .py-16 { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
+  .gap-8 { gap: 1rem !important; }
+  .gap-10, .gap-12 { gap: 1.25rem !important; }
+
+  .min-h-screen {
+    min-height: 100dvh !important;
+    height: auto !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+  .min-h-screen.justify-center,
+  .min-h-screen.items-center { justify-content: flex-start !important; }
+
+  .grid-cols-2, .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr !important; }
+
+  .anim-stage {
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+    min-height: 0 !important;
+  }
+
+  table { font-size: 0.82rem !important; }
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+  #mira-next, #next-card {
+    bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+    right: max(1rem, env(safe-area-inset-right)) !important;
+    width: 44px !important; height: 44px !important;
+  }
+}
+/* @MIRA:RESPONSIVE:END */
+</style>
+</head>
+
+<body>
+
+    <!-- Controles de slide: barra de progresso + botão flutuante "próximo" -->
+    <div id="mira-progress"></div>
+    <button id="mira-next" aria-label="Próximo slide">
+        <i data-lucide="chevron-down" class="w-6 h-6" id="mira-next-icon"></i>
+    </button>
+
+    <!-- ============ SLIDE 1: CAPA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6">
+        <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover" style="opacity: 0.5;">
+            <source src="header-bg.mp4" type="video/mp4">
+        </video>
+        <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0.55) 40%, rgba(0,0,0,0.85));"></div>
+        <div class="relative z-10 text-center max-w-4xl" data-aos="fade-up">
+            <p class="attribute-pill inline-block px-5 py-2 text-sm tracking-widest uppercase text-soft mb-8">Escola de Governo · Toledo-PR</p>
+            <h1 class="text-5xl md:text-6xl font-black leading-tight mb-6">
+                Shapefiles, simbologia<br>
+                <span class="primary-color">e coleta de dados</span>
+            </h1>
+            <p class="text-xl text-soft max-w-2xl mx-auto mb-10">Aula 2 de 10. O dado vetorial sai da teoria e vira arquivo de verdade, do shapefile ao mapa lançado na web.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-10">
+                <div class="glass-card p-5">
+                    <p class="text-4xl font-black primary-color">2ª</p>
+                    <p class="text-softer text-sm mt-1">de 10 aulas</p>
+                </div>
+                <div class="glass-card p-5">
+                    <p class="text-4xl font-black primary-color">3</p>
+                    <p class="text-softer text-sm mt-1">geometrias</p>
+                </div>
+                <div class="glass-card p-5">
+                    <p class="text-4xl font-black primary-color">6</p>
+                    <p class="text-softer text-sm mt-1">formas de coleta</p>
+                </div>
+                <div class="glass-card p-5">
+                    <p class="text-4xl font-black primary-color">1</p>
+                    <p class="text-softer text-sm mt-1">mapa web ao vivo</p>
+                </div>
+            </div>
+            <div class="flex items-center justify-center gap-3 text-softer text-sm">
+                <i data-lucide="users" class="w-4 h-4 primary-color"></i> Romano e Valdecir
+                <span class="opacity-40">|</span>
+                <i data-lucide="calendar" class="w-4 h-4 primary-color"></i> 15/09/2026
+            </div>
+            <img src="logo.png" alt="Escola de Governo, Município de Toledo-PR" class="h-16 mx-auto mt-10 opacity-90">
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 2: PONTE COM A AULA 1 (CITAÇÃO) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="relative z-10 text-center max-w-4xl" data-aos="fade-up">
+            <div class="icon-hero mx-auto mb-8" style="width:64px;height:64px;border-radius:18px;">
+                <i data-lucide="quote" class="primary-color w-7 h-7"></i>
+            </div>
+            <p class="text-3xl md:text-4xl font-bold leading-snug mb-8">
+                "Todo ponto, linha ou polígono carrega um número que o liga a uma tabela."
+            </p>
+            <p class="text-soft text-lg">O que você aprendeu na Aula 1, hoje vira arquivo de verdade</p>
+            <div class="flex items-center justify-center gap-3 text-softer text-sm mt-10">
+                <i data-lucide="arrow-down" class="w-4 h-4 primary-color"></i> Vamos abrir o shapefile
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 3: ANATOMIA DO SHAPEFILE ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-10" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="folder-open" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-5xl font-black">Um shapefile nunca vem sozinho</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Quatro arquivos mínimos, perca um e a camada quebra</p>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 w-full max-w-5xl">
+            <div class="glass-card p-8 text-center" data-aos="fade-up" data-aos-delay="100">
+                <div class="icon-hero mx-auto mb-5"><i data-lucide="map" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-xl font-bold mb-2">.shp</h3>
+                <p class="text-soft text-sm">Guarda a geometria, onde cada objeto está no espaço</p>
+            </div>
+            <div class="glass-card p-8 text-center" data-aos="fade-up" data-aos-delay="200">
+                <div class="icon-hero mx-auto mb-5"><i data-lucide="zap" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-xl font-bold mb-2">.shx</h3>
+                <p class="text-soft text-sm">Índice rápido, acha a geometria sem ler tudo</p>
+            </div>
+            <div class="glass-card p-8 text-center" data-aos="fade-up" data-aos-delay="300">
+                <div class="icon-hero mx-auto mb-5"><i data-lucide="table" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-xl font-bold mb-2">.dbf</h3>
+                <p class="text-soft text-sm">Tabela de atributos, o que cada objeto significa</p>
+            </div>
+            <div class="glass-card p-8 text-center" data-aos="fade-up" data-aos-delay="400">
+                <div class="icon-hero mx-auto mb-5"><i data-lucide="compass" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-xl font-bold mb-2">.prj</h3>
+                <p class="text-soft text-sm">Sistema de referência, garante que o mapa bate com o mundo real</p>
+            </div>
+        </div>
+        <p class="text-softer mt-10 text-center max-w-2xl" data-aos="fade-up">Opcionais que também acompanham o conjunto: <span class="text-soft">.cpg</span> (acentuação), <span class="text-soft">.sbn</span> (índice espacial extra) e <span class="text-soft">.qmd</span> (metadados).</p>
+    </section>
+
+    <!-- ============ SLIDE 4: OS TRÊS TIPOS DE GEOMETRIA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-12" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="shapes" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-5xl font-black">Ponto, linha ou polígono: escolha um</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Um shapefile guarda só um tipo de geometria por vez</p>
+        </div>
+        <div class="grid md:grid-cols-3 gap-6 w-full max-w-5xl items-stretch">
+            <div id="geo-ponto" class="glass-card p-8 transition-all duration-700" data-aos="fade-up" data-aos-delay="100">
+                <div class="icon-hero mb-5"><i data-lucide="map-pin" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-3">Ponto</h3>
+                <p class="text-soft text-sm">Um poço, uma árvore, um hidrante: posição exata, sem forma.</p>
+            </div>
+            <div id="geo-linha" class="glass-card p-8 transition-all duration-700" data-aos="fade-up" data-aos-delay="200">
+                <div class="icon-hero mb-5"><i data-lucide="route" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-3">Linha</h3>
+                <p class="text-soft text-sm">Uma rua, um rio, uma rede elétrica: caminho com direção.</p>
+            </div>
+            <div id="geo-poligono" class="glass-card p-8 transition-all duration-700" data-aos="fade-up" data-aos-delay="300">
+                <div class="icon-hero mb-5"><i data-lucide="pentagon" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-3">Polígono</h3>
+                <p class="text-soft text-sm">Um lote, um bairro, uma área queimada: limite fechado com área.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 5: SIMBOLOGIA POR GEOMETRIA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-10" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="palette" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-5xl font-black">A simbologia fala antes da tabela</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Cada geometria tem seu próprio jogo de regras visuais</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-8 overflow-x-auto" data-aos="fade-up">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="border-b" style="border-color: var(--mira-card-border);">
+                        <th class="py-3 pr-4 text-softer text-sm uppercase tracking-wider">Geometria</th>
+                        <th class="py-3 pr-4 text-softer text-sm uppercase tracking-wider">O que ajustar</th>
+                        <th class="py-3 text-sm uppercase tracking-wider primary-color">Exemplo</th>
+                    </tr>
+                </thead>
+                <tbody class="text-soft">
+                    <tr class="border-b" style="border-color: var(--mira-card-border);"><td class="py-3 pr-4 font-semibold">Ponto</td><td class="py-3 pr-4">Marcador, ícone, tamanho, cor</td><td class="py-3">Hidrante vermelho maior que poste cinza</td></tr>
+                    <tr class="border-b" style="border-color: var(--mira-card-border);"><td class="py-3 pr-4 font-semibold">Linha</td><td class="py-3 pr-4">Espessura, estilo, tracejado</td><td class="py-3">Rio contínuo azul, limite tracejado preto</td></tr>
+                    <tr style="background: var(--mira-icon-bg);"><td class="py-3 pr-4 font-semibold">Polígono</td><td class="py-3 pr-4">Preenchimento, contorno, transparência, hachura</td><td class="py-3 font-semibold">Área queimada em vermelho translúcido</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-softer mt-8 text-center max-w-2xl" data-aos="fade-up">A simbologia certa comunica a informação antes de o usuário abrir a tabela de atributos.</p>
+    </section>
+
+    <!-- ============ SLIDE 6: FORMAS DE COLETAR DADO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-10" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="satellite" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-5xl font-black">Seis jeitos de colocar um ponto no mapa</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Do GPS de bolso ao drone sobrevoando o terreno</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-8 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.__coletaReplay && window.__coletaReplay()">↻ replay</button>
+            <!-- @MIRA:SIZE 3/10 -->
+            <div id="coleta-stage" class="anim-stage"></div>
+        </div>
+        <p class="text-softer mt-8 text-center max-w-2xl" data-aos="fade-up">Seis caminhos diferentes para o mesmo destino: um ponto certo no mapa.</p>
+    </section>
+
+    <!-- ============ SLIDE 7: CTA DE TRANSIÇÃO DE BLOCO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-16">
+        <div class="cta-breathe absolute inset-0 pointer-events-none"></div>
+        <div class="relative z-10 text-center max-w-3xl" data-aos="zoom-in">
+            <div class="icon-hero mx-auto mb-8" style="width:72px;height:72px;border-radius:20px;">
+                <i data-lucide="arrow-right-circle" class="primary-color w-9 h-9"></i>
+            </div>
+            <h2 class="text-6xl font-black mb-6">O dado está coletado. E agora?</h2>
+            <p class="text-xl text-soft mb-10">Ele precisa virar mapa, e o mapa precisa rodar na web</p>
+            <p class="attribute-pill inline-block px-6 py-3 text-base text-soft">Vamos ao navegador</p>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 8: OPENLAYERS CONTRA QGIS ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-12" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="scale" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-5xl font-black">Mapa no navegador contra mapa na mesa</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">OpenLayers e QGIS resolvem problemas diferentes</p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-8 w-full max-w-5xl items-stretch">
+            <div id="versus-a" class="glass-card p-10 transition-all duration-700" data-aos="fade-right">
+                <div class="icon-hero mb-6"><i data-lucide="globe" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-3xl font-bold mb-4">OpenLayers</h3>
+                <ul class="space-y-3 text-soft">
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Roda no navegador, nada para instalar</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Ideal para lançar dado rápido</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Qualquer um acessa pelo link</li>
+                </ul>
+            </div>
+            <div id="versus-b" class="glass-card p-10 transition-all duration-700" data-aos="fade-left">
+                <div class="icon-hero mb-6"><i data-lucide="monitor" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-3xl font-bold mb-4">QGIS</h3>
+                <ul class="space-y-3 text-soft">
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Roda no computador, motor de análise pesada</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Ideal para cruzar camadas</li>
+                    <li class="flex gap-3"><i data-lucide="check" class="primary-color w-5 h-5 shrink-0"></i> Ambiente completo de geoprocessamento</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 9: CASO PRÁTICO, POLÍGONO DE QUEIMADA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-10" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="flame" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-5xl font-black">Do clique no mapa ao QGIS</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">O caminho de um polígono de área queimada</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-8 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.__fluxoReplay && window.__fluxoReplay()">↻ replay</button>
+            <div id="fluxo-stage" class="anim-stage"></div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 10: O ELO DE VOLTA AO QGIS ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-10" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="link" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-5xl font-black">O que liga a web ao QGIS</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Três formatos garantem que os dois lados se entendam</p>
+        </div>
+        <div class="grid md:grid-cols-3 gap-6 w-full max-w-5xl mb-8">
+            <div class="glass-card p-8" data-aos="fade-up" data-aos-delay="100">
+                <div class="icon-hero mb-5"><i data-lucide="file-json" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-3">GeoJSON</h3>
+                <p class="text-soft text-sm">Leve, direto, lido por praticamente tudo</p>
+            </div>
+            <div class="glass-card p-8" data-aos="fade-up" data-aos-delay="200">
+                <div class="icon-hero mb-5"><i data-lucide="database" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-3">PostGIS</h3>
+                <p class="text-soft text-sm">Banco compartilhado, todo mundo lê e escreve</p>
+            </div>
+            <div class="glass-card p-8" data-aos="fade-up" data-aos-delay="300">
+                <div class="icon-hero mb-5"><i data-lucide="radio-tower" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-3">WFS</h3>
+                <p class="text-soft text-sm">Serviço que entrega geometria pela internet</p>
+            </div>
+        </div>
+        <p class="text-softer text-center max-w-2xl mx-auto" data-aos="fade-up">Precisa ser geometria válida, senão o QGIS recusa: o mesmo cuidado do shapefile, agora do outro lado da tela.</p>
+    </section>
+
+    <!-- ============ SLIDE 11: EXEMPLO DE GEOJSON ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-10" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="code" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-5xl font-black">Um polígono de queimada em texto puro</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Isso é tudo que o QGIS precisa para entender a área</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-6" data-aos="fade-up">
+            <div class="code-block"><span class="code-punc">{</span>
+  <span class="code-key">"type"</span><span class="code-punc">:</span> <span class="code-str">"Feature"</span><span class="code-punc">,</span>
+  <span class="code-key">"properties"</span><span class="code-punc">:</span> <span class="code-punc">{</span> <span class="code-key">"area_ha"</span><span class="code-punc">:</span> <span class="code-num">12.4</span><span class="code-punc">,</span> <span class="code-key">"data"</span><span class="code-punc">:</span> <span class="code-str">"2026-09-14"</span> <span class="code-punc">}</span><span class="code-punc">,</span>
+  <span class="code-key">"geometry"</span><span class="code-punc">:</span> <span class="code-punc">{</span>
+    <span class="code-key">"type"</span><span class="code-punc">:</span> <span class="code-str">"Polygon"</span><span class="code-punc">,</span>
+    <span class="code-key">"coordinates"</span><span class="code-punc">:</span> <span class="code-punc">[[[</span><span class="code-num">-53.71</span><span class="code-punc">,</span><span class="code-num">-24.71</span><span class="code-punc">],[</span><span class="code-num">-53.70</span><span class="code-punc">,</span><span class="code-num">-24.71</span><span class="code-punc">],[</span><span class="code-num">-53.70</span><span class="code-punc">,</span><span class="code-num">-24.70</span><span class="code-punc">],[</span><span class="code-num">-53.71</span><span class="code-punc">,</span><span class="code-num">-24.70</span><span class="code-punc">],[</span><span class="code-num">-53.71</span><span class="code-punc">,</span><span class="code-num">-24.71</span><span class="code-punc">]]]</span>
+  <span class="code-punc">}</span>
+<span class="code-punc">}</span></div>
+        </div>
+        <p class="text-softer mt-6 text-center max-w-2xl" data-aos="fade-up">Geometria e atributo, lado a lado, exatamente como na Aula 1.</p>
+    </section>
+
+    <!-- ============ SLIDE 12: RECAPITULAÇÃO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-10" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="list-checks" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-5xl font-black">O que você leva desta aula</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Seis peças que agora fazem parte do seu vocabulário</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-10" data-aos="fade-up">
+            <ul class="space-y-5">
+                <li class="flex gap-4 items-start"><span class="text-2xl font-black primary-color shrink-0 w-10">01</span><span class="text-soft text-lg">Shapefile é conjunto, não arquivo único</span></li>
+                <li class="flex gap-4 items-start"><span class="text-2xl font-black primary-color shrink-0 w-10">02</span><span class="text-soft text-lg">Só existem três geometrias vetoriais</span></li>
+                <li class="flex gap-4 items-start"><span class="text-2xl font-black primary-color shrink-0 w-10">03</span><span class="text-soft text-lg">Simbologia comunica antes da tabela</span></li>
+                <li class="flex gap-4 items-start"><span class="text-2xl font-black primary-color shrink-0 w-10">04</span><span class="text-soft text-lg">Dado espacial vem de seis fontes diferentes</span></li>
+                <li class="flex gap-4 items-start"><span class="text-2xl font-black primary-color shrink-0 w-10">05</span><span class="text-soft text-lg">OpenLayers lança rápido, QGIS analisa fundo</span></li>
+                <li class="flex gap-4 items-start"><span class="text-2xl font-black primary-color shrink-0 w-10">06</span><span class="text-soft text-lg">GeoJSON, PostGIS e WFS ligam os dois mundos</span></li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 13: FECHAMENTO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-16">
+        <div class="cta-breathe absolute inset-0 pointer-events-none"></div>
+        <div class="relative z-10 text-center max-w-3xl" data-aos="zoom-in">
+            <div class="icon-hero mx-auto mb-8" style="width:72px;height:72px;border-radius:20px;">
+                <i data-lucide="play" class="primary-color w-9 h-9"></i>
+            </div>
+            <h2 class="text-6xl font-black mb-6">Chega de teoria, vamos desenhar</h2>
+            <p class="text-xl text-soft mb-10">A próxima hora é mão na massa, com QGIS aberto</p>
+            <p class="attribute-pill inline-block px-6 py-3 text-base text-soft mb-10"><i data-lucide="mouse-pointer-click" class="inline w-4 h-4 mr-2 primary-color"></i>Abrir o QGIS</p>
+            <img src="logo.png" alt="Escola de Governo, Município de Toledo-PR" class="h-14 mx-auto opacity-90">
+            <p class="text-softer mt-8 text-sm tracking-widest uppercase">Escola de Governo · Toledo-PR · 2026</p>
+        </div>
+    </section>
+
+    <script>
+        AOS.init({ duration: 800, once: true });
+        lucide.createIcons();
+
+        const cssVar = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+        const PRIMARY = cssVar('--mira-primary');
+        const SOFT = 'rgba(255,255,255,0.70)';
+
+        // ===== SLIDE 4: TRIO GEOMETRIA — spotlight alternando entre ponto/linha/polígono (loop) =====
+        (function () {
+            const ids = ['geo-ponto', 'geo-linha', 'geo-poligono'];
+            const els = ids.map(id => document.getElementById(id)).filter(Boolean);
+            if (els.length === 0) return;
+            let turn = 0;
+            function highlight() {
+                els.forEach((el, i) => {
+                    if (i === turn) {
+                        el.style.transform = 'translateY(-8px) scale(1.03)';
+                        el.style.boxShadow = '0 20px 50px var(--mira-glow-strong)';
+                    } else {
+                        el.style.transform = 'none';
+                        el.style.boxShadow = '0 10px 30px var(--mira-glow-soft)';
+                    }
+                });
+                turn = (turn + 1) % els.length;
+            }
+            highlight();
+            setInterval(highlight, 2200);
+        })();
+
+        // ===== SLIDE 8: COMPARAÇÃO OPENLAYERS x QGIS — spotlight alternando (loop) =====
+        (function () {
+            const a = document.getElementById('versus-a');
+            const b = document.getElementById('versus-b');
+            if (!a || !b) return;
+            let turn = true;
+            setInterval(() => {
+                const on = turn ? a : b, off = turn ? b : a;
+                on.style.transform = 'translateY(-8px) scale(1.02)';
+                on.style.boxShadow = '0 20px 50px var(--mira-glow-strong)';
+                off.style.transform = 'none';
+                off.style.boxShadow = '0 10px 30px var(--mira-glow-soft)';
+                turn = !turn;
+            }, 2500);
+        })();
+
+        // ===== SLIDE 6: HUB DE COLETA — 6 satélites do mesmo tamanho, destaque passeia entre eles (entrada + loop) =====
+        (function () {
+            const stageEl = document.getElementById('coleta-stage');
+            if (!stageEl) return;
+
+            const METODOS = [
+                { t: 'GPS comum', d: 'poucos metros de erro' },
+                { t: 'GNSS / RTK', d: 'precisão de centímetros' },
+                { t: 'Imagem / ortofoto', d: 'digitalização em tela' },
+                { t: 'Dado pronto', d: 'IBGE, prefeitura, órgãos' },
+                { t: 'App de campo', d: 'QField, Mergin, Survey123' },
+                { t: 'Drone', d: 'ortomosaico do terreno' }
+            ];
+
+            function animateColeta() {
+                clearInterval(window.__coletaLoop);
+                window.__coletaGen = (window.__coletaGen || 0) + 1;
+                const myGen = window.__coletaGen;
+
+                const stage = d3.select('#coleta-stage');
+                stage.selectAll('*').remove();
+                const svg = stage.append('svg').attr('viewBox', '0 0 1280 720').attr('preserveAspectRatio', 'xMidYMid meet');
+
+                const cx = 640, cy = 372, R = 250, satR = 92;
+                const nodes = METODOS.map((m, i) => {
+                    const angle = -Math.PI / 2 + (i / METODOS.length) * Math.PI * 2;
+                    return { ...m, angle, x: cx + Math.cos(angle) * R, y: cy + Math.sin(angle) * R * 0.82 };
+                });
+
+                // raios do hub ate cada satelite
+                svg.selectAll('line.raio').data(nodes).join('line').attr('class', 'raio')
+                    .attr('x1', cx).attr('y1', cy).attr('x2', cx).attr('y2', cy)
+                    .attr('stroke', 'rgba(255,255,255,0.14)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 5')
+                    .transition().delay(100).duration(500).ease(d3.easeCubicOut)
+                    .attr('x2', d => d.x).attr('y2', d => d.y);
+
+                // hub central
+                const hub = svg.append('g').attr('transform', `translate(${cx},${cy})`);
+                hub.append('circle').attr('r', 0).attr('fill', 'rgba(255,255,255,0.07)')
+                    .attr('stroke', PRIMARY).attr('stroke-width', 2.5)
+                    .transition().duration(700).ease(d3.easeBackOut.overshoot(1.3)).attr('r', 62);
+                hub.append('text').text('Dado no').attr('text-anchor', 'middle').attr('dy', -4)
+                    .attr('fill', PRIMARY).attr('font-size', 15).attr('font-weight', 800)
+                    .attr('opacity', 0).transition().delay(450).duration(300).attr('opacity', 1);
+                hub.append('text').text('mapa').attr('text-anchor', 'middle').attr('dy', 16)
+                    .attr('fill', PRIMARY).attr('font-size', 15).attr('font-weight', 800)
+                    .attr('opacity', 0).transition().delay(450).duration(300).attr('opacity', 1);
+
+                // satelites, todos do mesmo tamanho, sem hierarquia
+                const sats = svg.selectAll('g.sat').data(nodes).join('g').attr('class', 'sat')
+                    .attr('transform', d => `translate(${d.x},${d.y})`);
+
+                const ring = sats.append('circle').attr('class', 'ring').attr('r', 0)
+                    .attr('fill', 'rgba(255,255,255,0.055)').attr('stroke', PRIMARY).attr('stroke-opacity', 0.45).attr('stroke-width', 2)
+                    .transition().delay((d, i) => 500 + i * 130).duration(500).ease(d3.easeBackOut.overshoot(1.4)).attr('r', satR);
+
+                sats.append('text').attr('class', 'num').text((d, i) => i + 1)
+                    .attr('text-anchor', 'middle').attr('dy', -satR + 24)
+                    .attr('fill', PRIMARY).attr('font-size', 16).attr('font-weight', 800)
+                    .attr('opacity', 0).transition().delay((d, i) => 850 + i * 130).duration(300).attr('opacity', 1);
+
+                sats.append('text').attr('class', 'titulo').text(d => d.t)
+                    .attr('text-anchor', 'middle').attr('dy', 2)
+                    .attr('fill', 'rgba(255,255,255,0.92)').attr('font-size', 15).attr('font-weight', 700)
+                    .attr('opacity', 0).transition().delay((d, i) => 900 + i * 130).duration(300).attr('opacity', 1);
+
+                sats.append('text').attr('class', 'desc').text(d => d.d)
+                    .attr('text-anchor', 'middle').attr('dy', 22)
+                    .attr('fill', 'rgba(255,255,255,0.55)').attr('font-size', 10.5)
+                    .attr('opacity', 0).transition().delay((d, i) => 950 + i * 130).duration(300).attr('opacity', 1);
+
+                // loop: destaque passeia por todos os satelites, um de cada vez, mesmo peso visual para todos
+                const entradaFim = 900 + (nodes.length - 1) * 130 + 400;
+                let turn = 0;
+                function highlight() {
+                    if (myGen !== window.__coletaGen) return;
+                    ring.transition().duration(350)
+                        .attr('r', (d, i) => i === turn ? satR * 1.08 : satR)
+                        .attr('stroke-opacity', (d, i) => i === turn ? 1 : 0.45)
+                        .attr('fill', (d, i) => i === turn ? 'var(--mira-icon-bg)' : 'rgba(255,255,255,0.055)')
+                        .style('filter', (d, i) => i === turn ? `drop-shadow(0 0 14px ${PRIMARY})` : 'none');
+                    turn = (turn + 1) % nodes.length;
+                }
+                setTimeout(() => {
+                    if (myGen !== window.__coletaGen) return;
+                    highlight();
+                    window.__coletaLoop = setInterval(highlight, 1000);
+                }, entradaFim);
+            }
+            window.__coletaReplay = animateColeta;
+            animateColeta();
+        })();
+
+        // ===== SLIDE 9: FLUXO — partícula viajando do navegador ao QGIS (entrada + loop) =====
+        (function () {
+            const ETAPAS = ['Desenhar no OpenLayers', 'Salvar em GeoJSON', 'Abrir no QGIS', 'Checar e cruzar camadas'];
+            const W = 960, H = 540;
+            const svg = d3.select('#fluxo-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const xs = d3.scalePoint().domain(d3.range(ETAPAS.length)).range([120, W - 120]);
+            const cy = H / 2;
+
+            svg.append('line').attr('x1', xs(0)).attr('x2', xs(ETAPAS.length - 1)).attr('y1', cy).attr('y2', cy)
+                .attr('stroke', 'rgba(255,255,255,0.12)').attr('stroke-width', 2);
+
+            const nodes = svg.selectAll('g.node').data(ETAPAS).join('g')
+                .attr('transform', (d, i) => `translate(${xs(i)},${cy})`);
+            nodes.append('circle').attr('r', 0).attr('fill', 'rgba(255,255,255,0.06)')
+                .attr('stroke', PRIMARY).attr('stroke-width', 2)
+                .transition().delay((d, i) => 300 + i * 250).duration(600).ease(d3.easeBackOut).attr('r', 34);
+            nodes.append('text').text((d, i) => i + 1).attr('text-anchor', 'middle').attr('dy', 6)
+                .attr('fill', PRIMARY).attr('font-size', 20).attr('font-weight', 800)
+                .attr('opacity', 0).transition().delay((d, i) => 600 + i * 250).attr('opacity', 1);
+            nodes.append('text').text(d => d).attr('text-anchor', 'middle').attr('dy', 68)
+                .attr('fill', 'rgba(255,255,255,0.7)').attr('font-size', 14)
+                .attr('opacity', 0).transition().delay((d, i) => 700 + i * 250).attr('opacity', 1);
+
+            const particle = svg.append('circle').attr('r', 7).attr('fill', PRIMARY)
+                .attr('cy', cy).attr('cx', xs(0)).style('filter', `drop-shadow(0 0 8px ${PRIMARY})`);
+            function travel() {
+                particle.attr('cx', xs(0)).attr('opacity', 1)
+                    .transition().duration(3200).ease(d3.easeCubicInOut).attr('cx', xs(ETAPAS.length - 1))
+                    .transition().duration(300).attr('opacity', 0).on('end', travel);
+            }
+            travel();
+            d3.interval(() => {
+                nodes.selectAll('circle')
+                    .transition().delay((d, i) => i * 200).duration(350).attr('r', 39)
+                    .transition().duration(350).attr('r', 34);
+            }, 3500);
+            window.__fluxoReplay = travel;
+        })();
+
+        // === CONTROLES DE SLIDE: navegação card-a-card (progresso + botão + teclado) ===
+        (function () {
+            const cardSections = Array.from(document.querySelectorAll('body > section'));
+            if (cardSections.length === 0) return;
+
+            const progress = document.getElementById('mira-progress');
+            const nextBtn = document.getElementById('mira-next');
+            const nextIcon = document.getElementById('mira-next-icon');
+
+            const atBottom = () =>
+                (window.scrollY + window.innerHeight) >= (document.documentElement.scrollHeight - 100);
+
+            function currentIndex() {
+                const y = window.scrollY + window.innerHeight * 0.3;
+                let idx = -1;
+                for (let i = 0; i < cardSections.length; i++) {
+                    if (cardSections[i].offsetTop <= y) idx = i;
+                }
+                return idx;
+            }
+
+            function goTo(i) {
+                const idx = Math.max(0, Math.min(cardSections.length - 1, i));
+                cardSections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            window.addEventListener('scroll', () => {
+                const docH = document.documentElement.scrollHeight - window.innerHeight;
+                progress.style.width = (docH > 0 ? (window.scrollY / docH) * 100 : 0) + '%';
+                nextBtn.classList.toggle('visible', window.scrollY > 300);
+                nextIcon.setAttribute('data-lucide', atBottom() ? 'chevron-up' : 'chevron-down');
+                lucide.createIcons();
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (atBottom()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+                goTo(currentIndex() + 1);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key)) {
+                    e.preventDefault();
+                    goTo(currentIndex() + 1);
+                } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+                    e.preventDefault();
+                    const idx = currentIndex();
+                    if (idx <= 0) window.scrollTo({ top: 0, behavior: 'smooth' });
+                    else goTo(idx - 1);
+                } else if (e.key === 'Home') {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (e.key === 'End') {
+                    e.preventDefault();
+                    goTo(cardSections.length - 1);
+                } else if (e.key.toLowerCase() === 'f') {
+                    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                    else document.exitFullscreen();
+                }
+            });
+        })();
+    </script>
+
+    <!-- Modo edição (reordenar slides): tecla E ou ?edit=1 -->
+    <script src="mira/mira-edit.js" defer></script>
+    <!-- Edição livre estilo Canva (mover/redimensionar/rotacionar/duplicar/excluir/texto): tecla E -->
+    <script src="mira/mira-edit-free.js" defer></script>
+    <!-- mira-draw (desenhar sobre o slide): tecla P ou ?draw=1 -->
+    <script src="mira/mira-draw.js" defer></script>
+</body>
+
+</html>
