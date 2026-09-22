@@ -1,0 +1,46 @@
+KIT DA AULA — QGIS + PostGIS: erros silenciosos
+================================================
+
+Arquivos
+--------
+bairros_sujo.shp / .shx / .dbf   Shapefile "sujo", propositalmente SEM .cpg e SEM .prj
+                                 - texto em Latin-1 (ISO-8859-1)
+                                 - CRS real: SIRGAS 2000 / UTM 22S (EPSG:31982)
+                                 - 8 bairros fictícios perto de Toledo-PR
+bairros_fonte.geojson            Versão limpa da origem, UTF-8, com CRS declarado.
+                                 Tem campos longos (>10 chars), booleano, data+hora e uma
+                                 descrição com >254 chars — para o exercício de exportar
+                                 para shapefile e ver o que se perde.
+demo.sql                         Roteiro SQL com gabarito nos comentários. Rodar bloco a bloco.
+build_kit.py                     Gera os dois arquivos acima (pip install pyshp). Só se quiser alterar.
+
+O que o shapefile tem de errado (não contar para a turma antes)
+----------------------------------------------------------------
+ORDER 1  Centro                bairro normal, referência para a pergunta 3
+ORDER 2  São José              acentuado, correto
+ORDER 3  São José[NBSP]        termina com espaço NÃO-QUEBRÁVEL (invisível; trim() não remove)
+ORDER 4  Vila Industrial       multipolygon (2 partes); maior área real (180 ha)
+ORDER 5  Jardim Coopagro       polígono INVÁLIDO (gravata-borboleta); ST_Area = 0
+ORDER 6  (vazio)               nome '' ; AREA_HA = '100,5' (vírgula decimal); POP vazio
+ORDER 7  JARDIM PORTO ALEGRE   tudo em maiúsculas
+ORDER 8  Santa Clara           normal
+Campos:  ORDER (palavra reservada), NOME, AREA_HA e POP guardados como TEXTO, DESCRICAO
+
+Roteiro sugerido
+----------------
+1. Descompactar em uma pasta com acento e espaço, de propósito:
+   C:\Users\<usuário>\Área de Trabalho\Aula QGIS\
+2. Abrir bairros_sujo.shp no QGIS. Perguntar: qual CRS o QGIS assumiu? Como estão os acentos?
+3. Propriedades da camada → Fonte → Codificação = ISO-8859-1; CRS = EPSG:31982.
+4. DB Manager → Importar camada para o PostGIS (public.bairros_sujo):
+   - marcar "Converter nomes de campo para minúsculas" e "Promover para multipartes"
+   - (opcional) importar de novo DESMARCANDO os dois, como "BAIRROS_SUJO", para o bloco 1 do demo.sql
+5. Rodar demo.sql bloco a bloco e responder:
+   P1  Quantos bairros se chamam "São José"?       ingênuo: 1   correto: 2
+   P2  Qual bairro tem a maior área?               ingênuo: Jardim Coopagro (95)   correto: Vila Industrial (180)
+   P3  Quais bairros fazem fronteira com o Centro? 6 — mas Jardim Coopagro só é garantido após ST_MakeValid
+6. Exportar bairros_fonte.geojson para shapefile: ver nomes de campo truncados e descrição cortada.
+7. Rodar um algoritmo do GRASS (v.buffer) com a camada na pasta com acento; mover para C:\gis\ e repetir.
+
+Testado com PostgreSQL 16 + PostGIS 3.4. Os ERRORs que aparecem ao rodar o demo.sql inteiro são
+os esperados (cada um está comentado na linha correspondente).

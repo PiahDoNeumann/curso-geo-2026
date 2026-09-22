@@ -1,0 +1,371 @@
+{
+ "type": "FeatureCollection",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "urn:ogc:def:crs:EPSG::31982"
+  }
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "codigo_bairro": 1,
+    "nome_completo_do_bairro": "Centro",
+    "nome_abreviado_do_bairro": "Centro",
+    "area_hectares": 100.0,
+    "populacao_estimada": 9000,
+    "descricao_detalhada": "Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação:",
+    "ativo": true,
+    "atualizado_em": "2026-09-22T07:30:00"
+   },
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        222000,
+        7263000
+       ],
+       [
+        222000,
+        7264000
+       ],
+       [
+        223000,
+        7264000
+       ],
+       [
+        223000,
+        7263000
+       ],
+       [
+        222000,
+        7263000
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "codigo_bairro": 2,
+    "nome_completo_do_bairro": "São José",
+    "nome_abreviado_do_bairro": "São José",
+    "area_hectares": 100.0,
+    "populacao_estimada": 1200,
+    "descricao_detalhada": "Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação:",
+    "ativo": true,
+    "atualizado_em": "2026-09-22T07:30:00"
+   },
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        222000,
+        7264000
+       ],
+       [
+        222000,
+        7265000
+       ],
+       [
+        223000,
+        7265000
+       ],
+       [
+        223000,
+        7264000
+       ],
+       [
+        222000,
+        7264000
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "codigo_bairro": 3,
+    "nome_completo_do_bairro": "São José",
+    "nome_abreviado_do_bairro": "São José",
+    "area_hectares": 100.0,
+    "populacao_estimada": 850,
+    "descricao_detalhada": "Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação:",
+    "ativo": true,
+    "atualizado_em": "2026-09-22T07:30:00"
+   },
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        222000,
+        7262000
+       ],
+       [
+        222000,
+        7263000
+       ],
+       [
+        223000,
+        7263000
+       ],
+       [
+        223000,
+        7262000
+       ],
+       [
+        222000,
+        7262000
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "codigo_bairro": 4,
+    "nome_completo_do_bairro": "Vila Industrial",
+    "nome_abreviado_do_bairro": "Vila Ind",
+    "area_hectares": 180.0,
+    "populacao_estimada": 400,
+    "descricao_detalhada": "Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação:",
+    "ativo": true,
+    "atualizado_em": "2026-09-22T07:30:00"
+   },
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        221000,
+        7263000
+       ],
+       [
+        221000,
+        7264000
+       ],
+       [
+        221900,
+        7264000
+       ],
+       [
+        221900,
+        7263000
+       ],
+       [
+        221000,
+        7263000
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        220000,
+        7263000
+       ],
+       [
+        220000,
+        7264000
+       ],
+       [
+        220900,
+        7264000
+       ],
+       [
+        220900,
+        7263000
+       ],
+       [
+        220000,
+        7263000
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "codigo_bairro": 5,
+    "nome_completo_do_bairro": "Jardim Coopagro",
+    "nome_abreviado_do_bairro": "Jardim C",
+    "area_hectares": 95.0,
+    "populacao_estimada": 2100,
+    "descricao_detalhada": "Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação:",
+    "ativo": true,
+    "atualizado_em": "2026-09-22T07:30:00"
+   },
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        223000,
+        7263000
+       ],
+       [
+        224000,
+        7264000
+       ],
+       [
+        224000,
+        7263000
+       ],
+       [
+        223000,
+        7264000
+       ],
+       [
+        223000,
+        7263000
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "codigo_bairro": 6,
+    "nome_completo_do_bairro": "Sem nome",
+    "nome_abreviado_do_bairro": "Sem nome",
+    "area_hectares": 100.5,
+    "populacao_estimada": null,
+    "descricao_detalhada": "Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação:",
+    "ativo": true,
+    "atualizado_em": "2026-09-22T07:30:00"
+   },
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        221000,
+        7264000
+       ],
+       [
+        221000,
+        7265000
+       ],
+       [
+        222000,
+        7265000
+       ],
+       [
+        222000,
+        7264000
+       ],
+       [
+        221000,
+        7264000
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "codigo_bairro": 7,
+    "nome_completo_do_bairro": "JARDIM PORTO ALEGRE",
+    "nome_abreviado_do_bairro": "JARDIM P",
+    "area_hectares": 100.0,
+    "populacao_estimada": 3300,
+    "descricao_detalhada": "Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação:",
+    "ativo": true,
+    "atualizado_em": "2026-09-22T07:30:00"
+   },
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        223000,
+        7264000
+       ],
+       [
+        223000,
+        7265000
+       ],
+       [
+        224000,
+        7265000
+       ],
+       [
+        224000,
+        7264000
+       ],
+       [
+        223000,
+        7264000
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "codigo_bairro": 8,
+    "nome_completo_do_bairro": "Santa Clara",
+    "nome_abreviado_do_bairro": "Santa Cl",
+    "area_hectares": 90.0,
+    "populacao_estimada": 700,
+    "descricao_detalhada": "Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação: Descrição detalhada do bairro para o exercício de exportação:",
+    "ativo": true,
+    "atualizado_em": "2026-09-22T07:30:00"
+   },
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        221000,
+        7262000
+       ],
+       [
+        221000,
+        7263000
+       ],
+       [
+        222000,
+        7263000
+       ],
+       [
+        222000,
+        7262000
+       ],
+       [
+        221000,
+        7262000
+       ]
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

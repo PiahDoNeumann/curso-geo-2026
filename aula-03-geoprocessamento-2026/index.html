@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Aula 03 · QGIS + PostGIS: erros silenciosos</title>
+    <script src="assets/vendor/tailwind.js"></script>
+    <link href="assets/vendor/aos.css" rel="stylesheet">
+    <script src="assets/vendor/aos.js"></script>
+    <script src="assets/vendor/lucide.js"></script>
+    <script src="assets/vendor/d3.v7.min.js"></script>
+    <link href="assets/vendor/inter.css" rel="stylesheet">
+    <style>
+        /* @MIRA:THEME:START */
+/* MIRA THEME: mira-dark (padrão)
+   Identidade clássica do canal: fundo preto, laranja vibrante,
+   glassmorphism no estilo clássico do canal. */
+:root {
+    --mira-primary: #FF904D;
+    --mira-crop: #35D07F;
+    --mira-bg: #000000;
+    --mira-text: #ffffff;
+    --mira-text-soft: rgba(255, 255, 255, 0.70);
+    --mira-text-softer: rgba(255, 255, 255, 0.50);
+    --mira-card-bg: rgba(255, 255, 255, 0.05);
+    --mira-card-border: rgba(255, 255, 255, 0.10);
+    --mira-glow-soft: rgba(255, 144, 77, 0.15);
+    --mira-glow-strong: rgba(255, 144, 77, 0.25);
+    --mira-icon-bg: rgba(255, 144, 77, 0.15);
+    --mira-icon-border: rgba(255, 144, 77, 0.30);
+    --mira-pill-bg: rgba(255, 255, 255, 0.04);
+    --mira-pill-border: rgba(255, 255, 255, 0.08);
+    --mira-stage-glow: rgba(255, 144, 77, 0.06);
+    --mira-accent-2: #FFC766;
+}
+
+
+/* ============================================================
+   MIRA — base.css
+   Estrutura compartilhada por todos os temas.
+   Os temas definem apenas as CSS variables (--mira-*).
+   ============================================================ */
+
+body {
+    background: var(--mira-bg);
+    min-height: 100vh;
+    color: var(--mira-text);
+    font-family: 'Inter', sans-serif;
+}
+
+.primary-color { color: var(--mira-primary); }
+.primary-bg { background: var(--mira-primary); }
+
+.glass-card {
+    background: var(--mira-card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--mira-card-border);
+    box-shadow: 0 10px 30px var(--mira-glow-soft);
+    transition: all 0.3s ease;
+    border-radius: 0.75rem;
+}
+
+.glass-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px var(--mira-glow-strong);
+}
+
+.icon-hero {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    background: var(--mira-icon-bg);
+    border: 1px solid var(--mira-icon-border);
+}
+
+.attribute-pill {
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    transition: all 0.25s ease;
+    border-radius: 9999px;
+}
+
+.attribute-pill:hover {
+    background: var(--mira-icon-bg);
+    border-color: var(--mira-icon-border);
+    transform: translateY(-3px);
+}
+
+/* Palco de animação D3 — tamanho padrão do canvas */
+.anim-stage {
+    width: 100%;
+    height: clamp(400px, 60vh, 620px);
+    background: radial-gradient(circle at 50% 50%, var(--mira-stage-glow), transparent 70%);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.anim-stage svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.replay-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    color: var(--mira-text-soft);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.replay-btn:hover {
+    background: var(--mira-icon-bg);
+    color: var(--mira-primary);
+}
+
+.text-soft { color: var(--mira-text-soft); }
+.text-softer { color: var(--mira-text-softer); }
+
+@keyframes mira-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+@keyframes mira-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes mira-gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* @MIRA:THEME:END */
+
+        /* Cor de erro do deck (derivada do padrão Mira #FF6464) */
+        :root { --mira-error: #FF6464; --mira-error-bg: rgba(255, 100, 100, 0.15); --mira-error-border: rgba(255, 100, 100, 0.35); }
+
+        /* Diretriz de titulo da capa (CLAUDE.md): quebra equilibrada so no primeiro slide */
+        body > section:first-of-type h1,
+        body > section:first-of-type h2 { text-wrap: balance; }
+
+        /* === CONTROLES DE SLIDE (passagem card-a-card) === */
+        html { scroll-behavior: smooth; }
+        /* Scroll discreto (padrao Mira): a navegacao e por teclado/botao e o
+           progresso ja aparece na barra do topo; a scrollbar fica quase invisivel. */
+        html { scrollbar-width: thin; scrollbar-color: #2e2e2e #0d0d0d; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; background: #0d0d0d; }
+        ::-webkit-scrollbar-track { background: #0d0d0d; }
+        ::-webkit-scrollbar-thumb { background: #2e2e2e; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+        ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+
+        #mira-progress {
+            position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+            background: linear-gradient(90deg, var(--mira-primary), var(--mira-accent-2), var(--mira-primary));
+            background-size: 200% 100%;
+            animation: mira-shimmer 2s linear infinite;
+            z-index: 9999; transition: width 0.1s linear;
+            box-shadow: 0 0 10px var(--mira-glow-strong);
+        }
+
+        @keyframes mira-shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+
+        #mira-next {
+            position: fixed; bottom: 32px; right: 32px;
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--mira-primary); color: var(--mira-bg);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: none;
+            opacity: 0; transform: translateY(20px);
+            transition: all 0.3s ease; z-index: 9998;
+            box-shadow: 0 4px 20px var(--mira-glow-strong);
+        }
+        #mira-next.visible { opacity: 1; transform: translateY(0); }
+        #mira-next:hover { transform: translateY(-3px) scale(1.1); }
+    
+/* @MIRA:RESPONSIVE:START */
+/* ============================================================
+   MIRA — responsive.css  (camada de reflow mobile-first)
+   Objetivo: TODO slide 16:9 do Mira vira legível no celular em
+   retrato SEM arquivo mobile separado. O mesmo deck se reorganiza:
+   fontes encolhem, grids empilham, padding reduz, palcos escalam.
+
+   Estratégia: os decks nascem "desktop-first" (classes Tailwind com
+   tamanhos fixos: text-6xl, p-10, ...). Esta camada sobrescreve essas
+   classes abaixo de 640px. Usa !important de propósito — precisa
+   vencer o Tailwind CDN (injetado em runtime) em decks legados sem
+   reescrever o HTML. Os clamps têm teto ~= valor desktop, então em
+   telas largas nada muda; só encolhem no estreito.
+   ============================================================ */
+
+/* Guarda universal contra overflow horizontal (o "print cortado" no zap). */
+html, body { max-width: 100%; overflow-x: hidden; }
+img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
+
+@media (max-width: 640px) {
+
+  /* --- Tipografia fluida: encolhe títulos gigantes no celular --- */
+  .text-9xl { font-size: clamp(3rem, 12vw, 5rem)      !important; line-height: 1.05 !important; }
+  .text-8xl { font-size: clamp(2.75rem, 11vw, 4.5rem) !important; line-height: 1.06 !important; }
+  .text-7xl { font-size: clamp(2.25rem, 10vw, 3.75rem)!important; line-height: 1.08 !important; }
+  .text-6xl { font-size: clamp(2rem, 9vw, 3rem)       !important; line-height: 1.1  !important; }
+  .text-5xl { font-size: clamp(1.75rem, 8vw, 2.5rem)  !important; line-height: 1.12 !important; }
+  .text-4xl { font-size: clamp(1.5rem, 7vw, 2rem)     !important; line-height: 1.15 !important; }
+  .text-3xl { font-size: clamp(1.35rem, 6vw, 1.75rem) !important; line-height: 1.2  !important; }
+  .text-2xl { font-size: clamp(1.2rem, 5vw, 1.5rem)   !important; line-height: 1.25 !important; }
+  .text-xl  { font-size: clamp(1.05rem, 4.5vw, 1.25rem)!important; line-height: 1.3 !important; }
+
+  /* Títulos: quebram entre palavras; só partem uma palavra se ela sozinha
+     estourar a largura. Sem hyphens:auto — em PT ele hifena no meio
+     ("pode-rosas") e fica feio em título de display. */
+  h1, h2, h3 { overflow-wrap: break-word; }
+
+  /* --- Espaçamento: paddings de desktop sufocam o celular --- */
+  .p-12 { padding: 1.25rem !important; }
+  .p-10 { padding: 1.15rem !important; }
+  .p-8  { padding: 1.05rem !important; }
+  .px-12, .px-10 { padding-left: 1.15rem !important; padding-right: 1.15rem !important; }
+  .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .py-16 { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
+  .gap-8 { gap: 1rem !important; }
+  .gap-10, .gap-12 { gap: 1.25rem !important; }
+
+  /* --- Layout: seção de slide sempre alcançável pelo topo ---
+     min-h-screen + justify-center clipa o topo quando o conteúdo é
+     maior que a tela. No celular, ancora no topo e deixa rolar. */
+  .min-h-screen {
+    min-height: 100dvh !important;
+    height: auto !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+  .min-h-screen.justify-center,
+  .min-h-screen.items-center { justify-content: flex-start !important; }
+
+  /* --- Grids/flex de 2+ colunas empilham (redundante ao md: do
+         Tailwind, mas cobre grids sem breakpoint declarado). --- */
+  .grid-cols-2, .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr !important; }
+
+  /* --- Palco de animação (D3/SVG/canvas): nunca estoura a largura,
+         mantém proporção e encolhe a altura. --- */
+  .anim-stage {
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+    min-height: 0 !important;
+  }
+
+  /* --- Tabelas: fonte menor + rolagem horizontal se precisar. --- */
+  table { font-size: 0.82rem !important; }
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+  /* --- Controles flutuantes respeitam a safe-area do iPhone. --- */
+  #mira-next, #next-card {
+    bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+    right: max(1rem, env(safe-area-inset-right)) !important;
+    width: 44px !important; height: 44px !important;
+  }
+}
+/* @MIRA:RESPONSIVE:END */
+</style>
+</head>
+
+<body>
+    <!-- Controles de slide: barra de progresso + botão flutuante "próximo" -->
+    <div id="mira-progress"></div>
+    <button id="mira-next" aria-label="Próximo slide">
+        <i data-lucide="chevron-down" class="w-6 h-6" id="mira-next-icon"></i>
+    </button>
+
+    <!-- ============ SLIDE 1: CAPA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6">
+        <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover" style="opacity: 0.5;">
+            <source src="header-bg.mp4" type="video/mp4">
+        </video>
+        <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0.55) 40%, rgba(0,0,0,0.85));"></div>
+        <div class="relative z-10 text-center max-w-4xl" data-aos="fade-up">
+            <p class="attribute-pill inline-block px-5 py-2 text-sm tracking-widest uppercase text-soft mb-8">Escola de Governo · Toledo-PR</p>
+            <h1 class="text-5xl md:text-6xl font-black leading-tight mb-6">
+                O erro que<br>
+                <span class="primary-color">não avisa</span><span class="capa-cursor primary-color">_</span>
+            </h1>
+            <p class="text-xl text-soft max-w-2xl mx-auto mb-10">Aula 3 de 10. QGIS + PostGIS: as armadilhas que devolvem resultado errado sem nenhuma mensagem.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-10">
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">3ª</p>
+                    <p class="text-softer text-sm mt-1">de 10 aulas</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">0</p>
+                    <p class="text-softer text-sm mt-1">mensagens de erro</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">12</p>
+                    <p class="text-softer text-sm mt-1">sintomas silenciosos</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">3</p>
+                    <p class="text-softer text-sm mt-1">perguntas no exercício</p>
+                </div>
+            </div>
+            <div class="flex items-center justify-center gap-3 text-softer text-sm">
+                <i data-lucide="users" class="w-4 h-4 primary-color"></i> Romano e Valdecir
+                <span class="opacity-40">|</span>
+                <i data-lucide="calendar" class="w-4 h-4 primary-color"></i> 22/09/2026
+            </div>
+            <img src="logo.png" alt="Escola de Governo, Município de Toledo-PR" class="h-16 mx-auto mt-10 opacity-90">
+        </div>
+        <style>
+            .capa-cursor { animation: capa-blink 1.1s steps(1) infinite; }
+            @keyframes capa-blink { 50% { opacity: 0; } }
+            .capa-stat { animation: capa-stat-glow 6s ease-in-out infinite; }
+            .capa-stat:nth-child(2) { animation-delay: 1.5s; }
+            .capa-stat:nth-child(3) { animation-delay: 3s; }
+            .capa-stat:nth-child(4) { animation-delay: 4.5s; }
+            @keyframes capa-stat-glow {
+                0%, 70%, 100% { border-color: var(--mira-card-border); box-shadow: 0 10px 30px var(--mira-glow-soft); }
+                15% { border-color: var(--mira-icon-border); box-shadow: 0 10px 40px var(--mira-glow-strong); }
+            }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 2: ERRO QUE GRITA × SILENCIOSO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-10" data-aos="fade-up">
+            <h2 class="text-4xl md:text-5xl font-black">Erro bom é erro <span class="primary-color">que grita</span></h2>
+            <p class="text-soft text-lg mt-3">O perigo é o resultado que parece certo</p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-8 w-full max-w-5xl items-stretch">
+            <div id="grita-a" class="glass-card p-8 md:p-10" data-aos="fade-right">
+                <div class="icon-hero mb-6" style="background: var(--mira-error-bg); border-color: var(--mira-error-border);"><i data-lucide="siren" class="w-6 h-6" style="color: var(--mira-error);"></i></div>
+                <h3 class="text-3xl font-bold mb-2">Erro que grita</h3>
+                <p class="text-softer mb-5">Você para e corrige.</p>
+                <ul class="space-y-3 font-mono text-sm" style="color: var(--mira-error);">
+                    <li class="grita-line">ERROR: column "Centro" does not exist</li>
+                    <li class="grita-line">ERROR: TopologyException</li>
+                    <li class="grita-line">ERROR: invalid byte sequence for "UTF8"</li>
+                </ul>
+            </div>
+            <div id="grita-b" class="glass-card p-8 md:p-10" data-aos="fade-left">
+                <div class="icon-hero mb-6"><i data-lucide="volume-x" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-3xl font-bold mb-2">Erro silencioso</h3>
+                <p class="text-softer mb-5">Você segue e publica.</p>
+                <ul class="space-y-3 text-soft">
+                    <li class="flex gap-3 items-center"><span class="silent-dot"></span> Filtro que retorna <b class="primary-color">0 linhas</b></li>
+                    <li class="flex gap-3 items-center"><span class="silent-dot"></span> Join que não casa</li>
+                    <li class="flex gap-3 items-center"><span class="silent-dot"></span> Mapa <b class="primary-color">60 m</b> deslocado</li>
+                    <li class="flex gap-3 items-center"><span class="silent-dot"></span> Ordenação "errada"</li>
+                </ul>
+            </div>
+        </div>
+        <div class="attribute-pill px-6 py-3 mt-10 text-center max-w-4xl" data-aos="fade-up">
+            <i data-lucide="shield-check" class="inline w-4 h-4 mr-2 primary-color"></i>
+            Regra que resolve 80%: <b>minúsculas, sem acento, sem espaço, snake_case</b> e caminho curto <code class="primary-color">C:\gis\projeto\</code>
+        </div>
+        <style>
+            #grita-a { animation: grita-shake 4s ease-in-out infinite; }
+            @keyframes grita-shake {
+                0%, 12%, 100% { transform: translateX(0); border-color: var(--mira-card-border); }
+                2% { transform: translateX(-6px); border-color: var(--mira-error); }
+                4% { transform: translateX(6px); }
+                6% { transform: translateX(-4px); }
+                8% { transform: translateX(3px); border-color: var(--mira-error); }
+            }
+            .silent-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mira-primary); flex: 0 0 auto; animation: silent-breathe 3.2s ease-in-out infinite; }
+            .silent-dot:nth-of-type(1) { animation-delay: 0s; }
+            #grita-b li:nth-child(2) .silent-dot { animation-delay: .8s; }
+            #grita-b li:nth-child(3) .silent-dot { animation-delay: 1.6s; }
+            #grita-b li:nth-child(4) .silent-dot { animation-delay: 2.4s; }
+            @keyframes silent-breathe { 0%, 100% { opacity: .15; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.2); } }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 3: LIMITES DO SHAPEFILE ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="scissors" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">O shapefile <span class="primary-color">corta calado</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Formato de 1998: cada limite do DBF vira perda sem aviso</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-6 md:p-8" data-aos="fade-up">
+            <div id="tesoura-stage" class="anim-stage" style="height: 110px;"></div>
+            <div class="overflow-x-auto mt-4">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="text-softer text-sm uppercase tracking-wider border-b" style="border-color: var(--mira-card-border);">
+                            <th class="py-3 pr-4">Limite</th>
+                            <th class="py-3 pr-4">O que acontece</th>
+                            <th class="py-3">Como perceber</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-soft">
+                        <tr class="tab-row border-b" style="border-color: var(--mira-card-border);">
+                            <td class="py-3 pr-4 font-bold primary-color">Campo: 10 caracteres</td>
+                            <td class="py-3 pr-4"><code>nome_completo</code> vira <code>nome_compl</code></td>
+                            <td class="py-3">Join por nome não casa</td>
+                        </tr>
+                        <tr class="tab-row border-b" style="border-color: var(--mira-card-border);">
+                            <td class="py-3 pr-4 font-bold primary-color">Texto: 254 caracteres</td>
+                            <td class="py-3 pr-4">Endereço e observação cortados</td>
+                            <td class="py-3"><code>length()</code> depois do import</td>
+                        </tr>
+                        <tr class="tab-row border-b" style="border-color: var(--mira-card-border);">
+                            <td class="py-3 pr-4 font-bold primary-color">Sem NULL</td>
+                            <td class="py-3 pr-4">Texto vazio vira <code>''</code></td>
+                            <td class="py-3"><code>IS NULL</code> não acha nada</td>
+                        </tr>
+                        <tr class="tab-row border-b" style="border-color: var(--mira-card-border);">
+                            <td class="py-3 pr-4 font-bold primary-color">Sem booleano e sem hora</td>
+                            <td class="py-3 pr-4"><code>true</code> vira 1; a hora é descartada</td>
+                            <td class="py-3">Campo chega só com a data</td>
+                        </tr>
+                        <tr class="tab-row">
+                            <td class="py-3 pr-4 font-bold primary-color">3 ou mais arquivos</td>
+                            <td class="py-3 pr-4">Só o .shp = camada sem atributos</td>
+                            <td class="py-3">.shp + .shx + .dbf + .prj + .cpg juntos</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-softer text-sm mt-5"><i data-lucide="package-check" class="inline w-4 h-4 mr-1 primary-color"></i> Alternativa: <b class="primary-color">GeoPackage (.gpkg)</b>, um arquivo só e nenhum desses limites.</p>
+        </div>
+        <style>
+            .tab-row { animation: tab-scan 10s ease-in-out infinite; }
+            .tab-row:nth-child(2) { animation-delay: 2s; }
+            .tab-row:nth-child(3) { animation-delay: 4s; }
+            .tab-row:nth-child(4) { animation-delay: 6s; }
+            .tab-row:nth-child(5) { animation-delay: 8s; }
+            @keyframes tab-scan { 0%, 20%, 100% { background: transparent; } 8% { background: var(--mira-glow-soft); } }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 4: .CPG E .PRJ ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="map-pin-off" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Sem .prj, <span class="primary-color">o mapa mente</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Dois arquivos pequenos, dois erros invisíveis</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-6 md:p-8 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.__prjReplay && window.__prjReplay()">↻ replay</button>
+            <div id="prj-stage" class="anim-stage" style="height: clamp(340px, 50vh, 520px);"></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Sem .cpg: o QGIS <b>adivinha</b> a codificação</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Sem .prj: o QGIS <b>assume</b> um CRS</span>
+            <span class="attribute-pill px-5 py-2 text-sm">SIRGAS × WGS84: menos de 1 m</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 5: NOMES NO POSTGIS ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="quote" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Aspas duplas <span class="primary-color">são para sempre</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Sem aspas vira minúsculo; com aspas, você carrega o erro</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-0 overflow-hidden" data-aos="fade-up">
+            <div class="flex items-center gap-2 px-5 py-3 border-b" style="border-color: var(--mira-card-border);">
+                <span class="w-3 h-3 rounded-full" style="background: var(--mira-error);"></span>
+                <span class="w-3 h-3 rounded-full primary-bg"></span>
+                <span class="w-3 h-3 rounded-full" style="background: var(--mira-crop);"></span>
+                <span class="text-softer text-sm ml-3 font-mono">nomes_que_mordem.sql</span>
+            </div>
+            <pre id="code-nomes" class="font-mono text-sm md:text-base leading-relaxed p-6 md:p-8 overflow-x-auto"></pre>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm"><i data-lucide="check" class="inline w-4 h-4 mr-1 primary-color"></i>"Converter nomes para minúsculas": marcado</span>
+            <span class="attribute-pill px-5 py-2 text-sm"><i data-lucide="check" class="inline w-4 h-4 mr-1 primary-color"></i>Sem palavra reservada</span>
+            <span class="attribute-pill px-5 py-2 text-sm"><i data-lucide="check" class="inline w-4 h-4 mr-1 primary-color"></i>Máximo 63 bytes</span>
+        </div>
+        <style>
+            #code-nomes .c-com { color: var(--mira-text-softer); }
+            #code-nomes .c-kw { color: var(--mira-primary); font-weight: 700; }
+            #code-nomes .c-err { color: var(--mira-error); animation: err-pulse 2.4s ease-in-out infinite; }
+            #code-nomes .c-caret { display: inline-block; width: .6em; background: var(--mira-primary); animation: capa-blink 1s steps(1) infinite; }
+            @keyframes err-pulse { 0%, 100% { opacity: .7; text-shadow: none; } 50% { opacity: 1; text-shadow: 0 0 12px var(--mira-error); } }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 6: DADOS DE TEXTO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="equal-not" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Parece igual, <span class="primary-color">não é</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Nenhum destes gera erro, só resultado diferente</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 mb-6" data-aos="fade-up">
+            <div id="nbsp-stage" class="anim-stage" style="height: 150px;"></div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 w-full max-w-5xl">
+            <div class="glass-card p-5 grid-item" data-aos="fade-up" data-aos-delay="100">
+                <i data-lucide="case-sensitive" class="w-6 h-6 primary-color mb-3"></i>
+                <h3 class="text-xl font-bold mb-2">Caixa</h3>
+                <p class="font-mono text-sm text-soft">'TOLEDO' ≠ 'Toledo'</p>
+                <p class="text-sm mt-3 primary-color font-mono">ILIKE · lower()</p>
+            </div>
+            <div class="glass-card p-5 grid-item" data-aos="fade-up" data-aos-delay="200">
+                <i data-lucide="languages" class="w-6 h-6 primary-color mb-3"></i>
+                <h3 class="text-xl font-bold mb-2">Acento</h3>
+                <p class="font-mono text-sm text-soft">'Sao Jose' ≠ 'São José'</p>
+                <p class="text-sm mt-3 primary-color font-mono">unaccent()</p>
+            </div>
+            <div class="glass-card p-5 grid-item" data-aos="fade-up" data-aos-delay="300">
+                <i data-lucide="space" class="w-6 h-6 primary-color mb-3"></i>
+                <h3 class="text-xl font-bold mb-2">Espaço invisível</h3>
+                <p class="text-sm text-soft">Espaço não-quebrável no fim: <code>trim()</code> não remove</p>
+                <p class="text-sm mt-3 primary-color font-mono">regexp_replace + \u00a0</p>
+            </div>
+            <div class="glass-card p-5 grid-item" data-aos="fade-up" data-aos-delay="400">
+                <i data-lucide="circle-slash" class="w-6 h-6 primary-color mb-3"></i>
+                <h3 class="text-xl font-bold mb-2">Vazio × NULL</h3>
+                <p class="text-sm text-soft">O DBF não tem NULL: chega <code>''</code></p>
+                <p class="text-sm mt-3 primary-color font-mono">nullif(nome, '')</p>
+            </div>
+        </div>
+        <style>
+            .grid-item { animation: grid-spot 8s ease-in-out infinite; }
+            .grid-item:nth-child(2) { animation-delay: 2s; }
+            .grid-item:nth-child(3) { animation-delay: 4s; }
+            .grid-item:nth-child(4) { animation-delay: 6s; }
+            @keyframes grid-spot { 0%, 25%, 100% { border-color: var(--mira-card-border); } 10% { border-color: var(--mira-icon-border); box-shadow: 0 10px 40px var(--mira-glow-strong); } }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 7: NÚMERO COMO TEXTO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="arrow-down-wide-narrow" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">95</span> ganhou de <span class="primary-color">180</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Área guardada como texto ordena pelo primeiro caractere</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-6 md:p-8 relative" data-aos="fade-up">
+            <div id="ranking-stage" class="anim-stage" style="height: clamp(300px, 44vh, 440px);"></div>
+        </div>
+        <div class="grid md:grid-cols-2 gap-4 w-full max-w-5xl mt-6" data-aos="fade-up">
+            <div class="attribute-pill px-5 py-3 text-sm" style="border-radius: 14px;">
+                <i data-lucide="wrench" class="inline w-4 h-4 mr-2 primary-color"></i>
+                Vírgula decimal quebra o <code>::numeric</code>: use <code class="primary-color">replace(area_ha, ',', '.')::numeric</code>
+            </div>
+            <div class="attribute-pill px-5 py-3 text-sm" style="border-radius: 14px;">
+                <i data-lucide="arrow-up-a-z" class="inline w-4 h-4 mr-2 primary-color"></i>
+                Collation C põe "Água" depois de "Zumbi": crie o banco em <code class="primary-color">pt_BR.UTF-8</code>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 8: GEOMETRIA INVÁLIDA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="triangle-alert" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">A gravata que <span class="primary-color">zera a área</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Polígono que se cruza: área 0 e vizinhos imprevisíveis</p>
+        </div>
+        <div class="grid md:grid-cols-5 gap-6 w-full max-w-5xl items-stretch">
+            <div class="glass-card md:col-span-3 p-4 relative" data-aos="fade-right">
+                <button class="replay-btn" onclick="window.__gravataReplay && window.__gravataReplay()">↻ replay</button>
+                <div id="gravata-stage" class="anim-stage" style="height: clamp(320px, 50vh, 480px);"></div>
+            </div>
+            <div class="glass-card md:col-span-2 p-6 flex flex-col justify-center gap-4" data-aos="fade-left">
+                <p class="text-soft">Os dois triângulos têm sinais opostos e se anulam: <b class="primary-color">ST_Area = 0</b>, sem erro.</p>
+                <p class="text-soft"><code>ST_Intersects</code>, <code>ST_Touches</code> e <code>ST_Within</code> erram calados. Só <code>ST_Union</code> estoura.</p>
+                <pre class="font-mono text-xs md:text-sm p-4 rounded-lg overflow-x-auto" style="background: var(--mira-pill-bg); border: 1px solid var(--mira-pill-border);"><span class="text-softer">-- achar</span>
+SELECT nome, ST_IsValidReason(geom)
+FROM bairros WHERE NOT ST_IsValid(geom);
+<span class="text-softer">-- corrigir</span>
+UPDATE bairros
+SET geom = ST_Multi(<span class="primary-color">ST_MakeValid</span>(geom))
+WHERE NOT ST_IsValid(geom);</pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 9: QGIS E O BANCO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-10" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="key-round" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Três ajustes que <span class="primary-color">o QGIS cobra</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Sem eles, a camada abre, mas mente</p>
+        </div>
+        <div class="w-full max-w-5xl space-y-5">
+            <div class="glass-card p-6 md:p-8 flex gap-6 items-start lista-item" data-aos="fade-up" data-aos-delay="100">
+                <p class="text-5xl font-black primary-color w-12 shrink-0">1</p>
+                <div>
+                    <h3 class="text-2xl font-bold mb-1">Chave primária inteira</h3>
+                    <p class="text-soft">Sem ela o QGIS abre só leitura ou usa o <code>ctid</code>, e a edição some depois de um VACUUM.</p>
+                </div>
+            </div>
+            <div class="glass-card p-6 md:p-8 flex gap-6 items-start lista-item" data-aos="fade-up" data-aos-delay="200">
+                <p class="text-5xl font-black primary-color w-12 shrink-0">2</p>
+                <div>
+                    <h3 class="text-2xl font-bold mb-1"><code>ANALYZE</code> depois do import</h3>
+                    <p class="text-soft">Sem estatísticas, o "zoom para a camada" vai para o lugar errado ou a camada parece vazia.</p>
+                </div>
+            </div>
+            <div class="glass-card p-6 md:p-8 flex gap-6 items-start lista-item" data-aos="fade-up" data-aos-delay="300">
+                <p class="text-5xl font-black primary-color w-12 shrink-0">3</p>
+                <div>
+                    <h3 class="text-2xl font-bold mb-1">View com tipo declarado</h3>
+                    <p class="text-soft">Use <code class="primary-color">geom::geometry(MultiPolygon, 31982)</code>; senão o QGIS enxerga GEOMETRY com SRID 0 e precisa adivinhar.</p>
+                </div>
+            </div>
+        </div>
+        <style>
+            .lista-item { animation: lista-spot 9s ease-in-out infinite; }
+            .lista-item:nth-child(2) { animation-delay: 3s; }
+            .lista-item:nth-child(3) { animation-delay: 6s; }
+            @keyframes lista-spot { 0%, 30%, 100% { transform: translateX(0); border-color: var(--mira-card-border); } 12% { transform: translateX(10px); border-color: var(--mira-icon-border); box-shadow: 0 10px 40px var(--mira-glow-strong); } }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 10: WINDOWS ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="folder-x" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Seu caminho <span class="primary-color">quebra o GRASS</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">GDAL aguenta; GRASS, SAGA e plugins Python não</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-6 mb-6" data-aos="fade-up">
+            <div id="caminho-stage" class="anim-stage" style="height: 130px;"></div>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6 w-full max-w-5xl items-stretch">
+            <div id="win-a" class="glass-card p-8" data-aos="fade-right">
+                <div class="icon-hero mb-4" style="background: var(--mira-error-bg); border-color: var(--mira-error-border);"><i data-lucide="x" class="w-6 h-6" style="color: var(--mira-error);"></i></div>
+                <h3 class="text-2xl font-bold mb-3">Caminho que sabota</h3>
+                <ul class="space-y-2 text-soft">
+                    <li>Acento e espaço: saída vazia no Processing</li>
+                    <li>OneDrive sincronizando: projeto corrompido</li>
+                    <li>Mais de 260 caracteres: shapefile salvo pela metade</li>
+                    <li><code>Bairros.shp</code> + <code>bairros.dbf</code>: quebra no Linux e no GeoServer</li>
+                </ul>
+            </div>
+            <div id="win-b" class="glass-card p-8" data-aos="fade-left">
+                <div class="icon-hero mb-4"><i data-lucide="check" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-3">Caminho que funciona</h3>
+                <ul class="space-y-2 text-soft">
+                    <li><code class="primary-color">C:\gis\projeto\</code>: curto e sem acento</li>
+                    <li>Tudo em minúsculas</li>
+                    <li>Fora da pasta sincronizada</li>
+                    <li>Projeto com caminhos relativos</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 11: EXERCÍCIO (CTA) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-16">
+        <div class="cta-breathe absolute inset-0 pointer-events-none"></div>
+        <div class="relative z-10 w-full max-w-5xl text-center" data-aos="zoom-in">
+            <div class="icon-hero mx-auto mb-6" style="width:72px;height:72px;border-radius:20px;">
+                <i data-lucide="flask-conical" class="primary-color w-9 h-9"></i>
+            </div>
+            <h2 class="text-4xl md:text-5xl font-black mb-3">Seu turno: <span class="primary-color">o shapefile sujo</span></h2>
+            <p class="text-xl text-soft mb-10">8 bairros perto de Toledo, todas as armadilhas, 3 perguntas</p>
+            <div class="grid md:grid-cols-3 gap-5 mb-10 text-left">
+                <div class="glass-card p-6 pergunta">
+                    <p class="text-4xl font-black primary-color mb-2 q-mark">?</p>
+                    <p class="text-lg font-bold">Quantos bairros se chamam "São José"?</p>
+                </div>
+                <div class="glass-card p-6 pergunta">
+                    <p class="text-4xl font-black primary-color mb-2 q-mark">?</p>
+                    <p class="text-lg font-bold">Qual bairro tem a maior área?</p>
+                </div>
+                <div class="glass-card p-6 pergunta">
+                    <p class="text-4xl font-black primary-color mb-2 q-mark">?</p>
+                    <p class="text-lg font-bold">Quem faz fronteira com o Centro?</p>
+                </div>
+            </div>
+            <p class="text-soft mb-8">Descompacte o kit numa pasta <b>com acento</b>, importe pelo DB Manager e rode o <code class="primary-color">demo.sql</code> bloco a bloco.</p>
+            <a href="references/kit/" class="inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold primary-bg" style="color: var(--mira-bg); box-shadow: 0 4px 20px var(--mira-glow-strong);">
+                <i data-lucide="folder-open" class="w-5 h-5"></i> Abrir o kit
+            </a>
+        </div>
+        <style>
+            .cta-breathe {
+                background: radial-gradient(ellipse at 50% 60%, var(--mira-glow-strong), transparent 65%);
+                animation: mira-pulse 4s ease-in-out infinite;
+            }
+            .q-mark { display: inline-block; animation: q-bob 3s ease-in-out infinite; }
+            .pergunta:nth-child(2) .q-mark { animation-delay: 1s; }
+            .pergunta:nth-child(3) .q-mark { animation-delay: 2s; }
+            @keyframes q-bob { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-8px) rotate(-10deg); } 50% { transform: translateY(0) rotate(8deg); } }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 12: CHECKLIST E FECHO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-16">
+        <div class="relative z-10 text-center max-w-4xl" data-aos="zoom-in">
+            <div class="icon-hero mx-auto mb-8" style="width:72px;height:72px;border-radius:20px;">
+                <i data-lucide="ear" class="primary-color w-9 h-9"></i>
+            </div>
+            <h2 class="text-5xl md:text-6xl font-black mb-8">Desconfie <span class="primary-color">do silêncio</span></h2>
+            <blockquote class="text-2xl md:text-3xl text-soft leading-snug mb-12">
+                "Antes de aceitar zero linhas, um mapa bonito ou uma ordenação estranha, pergunte: <span class="primary-color font-bold">o que esse silêncio está escondendo?</span>"
+            </blockquote>
+            <div class="flex flex-wrap items-center justify-center gap-3 mb-12">
+                <span class="attribute-pill check-pill px-5 py-2 font-mono">length()</span>
+                <span class="attribute-pill check-pill px-5 py-2 font-mono">trim()</span>
+                <span class="attribute-pill check-pill px-5 py-2 font-mono">ST_IsValid()</span>
+                <span class="attribute-pill check-pill px-5 py-2 font-mono">ST_SRID()</span>
+                <span class="attribute-pill check-pill px-5 py-2 font-mono">ANALYZE</span>
+                <span class="attribute-pill check-pill px-5 py-2 font-mono">C:\gis\</span>
+            </div>
+            <img src="logo.png" alt="Escola de Governo, Município de Toledo-PR" class="h-14 mx-auto opacity-90">
+        </div>
+        <style>
+            .check-pill { animation: check-on 9s ease-in-out infinite; }
+            .check-pill:nth-child(2) { animation-delay: 1.5s; }
+            .check-pill:nth-child(3) { animation-delay: 3s; }
+            .check-pill:nth-child(4) { animation-delay: 4.5s; }
+            .check-pill:nth-child(5) { animation-delay: 6s; }
+            .check-pill:nth-child(6) { animation-delay: 7.5s; }
+            @keyframes check-on { 0%, 18%, 100% { color: var(--mira-text-soft); border-color: var(--mira-pill-border); } 6% { color: var(--mira-primary); border-color: var(--mira-icon-border); background: var(--mira-icon-bg); } }
+        </style>
+    </section>
+
+    <script>
+        AOS.init({ duration: 800, once: true });
+        lucide.createIcons();
+
+        const cssVar = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+        const PRIMARY = cssVar('--mira-primary');
+        const ERROR = cssVar('--mira-error');
+        const SOFT = cssVar('--mira-text-soft');
+        const SOFTER = cssVar('--mira-text-softer');
+        const BORDER = cssVar('--mira-card-border');
+        const TEXT = cssVar('--mira-text');
+
+        // Dispara a entrada quando o slide aparece; o loop continua depois
+        function onVisible(el, fn) {
+            let done = false;
+            new IntersectionObserver((ents, obs) => {
+                if (!done && ents[0].isIntersecting) { done = true; obs.disconnect(); fn(); }
+            }, { threshold: 0.35 }).observe(el);
+        }
+
+        // ===== SLIDE 3: tesoura cortando no 10º caractere (loop) =====
+        (function () {
+            const W = 960, H = 110, WORD = 'nome_completo', CW = 30, x0 = (W - WORD.length * CW) / 2, cy = 66;
+            const svg = d3.select('#tesoura-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const chars = svg.selectAll('text.ch').data(WORD.split('')).join('text').attr('class', 'ch')
+                .attr('x', (d, i) => x0 + i * CW + CW / 2).attr('y', cy).attr('text-anchor', 'middle')
+                .attr('font-family', 'monospace').attr('font-size', 40).attr('font-weight', 700)
+                .attr('fill', (d, i) => i < 10 ? TEXT : PRIMARY).text(d => d).attr('opacity', 0);
+            const cutX = x0 + 10 * CW;
+            const cut = svg.append('line').attr('x1', cutX).attr('x2', cutX).attr('y1', 10).attr('y2', 10)
+                .attr('stroke', ERROR).attr('stroke-width', 3).attr('stroke-dasharray', '6 5');
+            const label = svg.append('text').attr('x', cutX + 8).attr('y', 22).attr('fill', ERROR)
+                .attr('font-size', 14).attr('font-weight', 700).text('10').attr('opacity', 0);
+            function run() {
+                chars.interrupt().attr('opacity', 0).attr('transform', null)
+                    .transition().delay((d, i) => i * 60).duration(200).attr('opacity', 1);
+                cut.interrupt().attr('y2', 10).transition().delay(1200).duration(500).attr('y2', 100);
+                label.interrupt().attr('opacity', 0).transition().delay(1400).attr('opacity', 1);
+                chars.filter((d, i) => i >= 10).transition().delay(2000).duration(1400).ease(d3.easeCubicIn)
+                    .attr('transform', (d, i) => `translate(${30 + i * 20},70) rotate(${25 + i * 15})`).attr('opacity', 0);
+            }
+            onVisible(document.getElementById('tesoura-stage'), () => { run(); d3.interval(run, 5000); });
+        })();
+
+        // ===== SLIDE 4: mojibake + mapa deslocado 60 m (loop) =====
+        (function () {
+            const W = 960, H = 520;
+            const svg = d3.select('#prj-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            // Lado esquerdo: .cpg
+            const L = svg.append('g').attr('transform', 'translate(40,40)');
+            L.append('text').text('sem .cpg').attr('fill', PRIMARY).attr('font-size', 18).attr('font-weight', 800);
+            L.append('text').text('o QGIS adivinha a codificação').attr('y', 26).attr('fill', SOFTER).attr('font-size', 14);
+            const nome = L.append('text').attr('y', 150).attr('font-family', 'monospace').attr('font-size', 44)
+                .attr('font-weight', 700).attr('fill', TEXT).text('São José');
+            const len = L.append('text').attr('y', 200).attr('font-family', 'monospace').attr('font-size', 18).attr('fill', SOFT)
+                .text('length(nome) = 8');
+            L.append('text').attr('y', 270).attr('fill', SOFTER).attr('font-size', 15)
+                .text('8 é certo; 10 ou mais é texto corrompido');
+            L.append('text').attr('y', 300).attr('fill', SOFTER).attr('font-size', 15)
+                .text('e o filtro por nome retorna zero');
+            svg.append('line').attr('x1', 430).attr('x2', 430).attr('y1', 30).attr('y2', H - 30).attr('stroke', BORDER);
+
+            // Lado direito: .prj
+            const R = svg.append('g').attr('transform', 'translate(470,40)');
+            R.append('text').text('sem .prj').attr('fill', PRIMARY).attr('font-size', 18).attr('font-weight', 800);
+            R.append('text').text('SAD69 (29192) lido como SIRGAS 2000 (31982)').attr('y', 26).attr('fill', SOFTER).attr('font-size', 14);
+            const map = R.append('g').attr('transform', 'translate(0,60)');
+            const quadras = [[20, 20, 120, 90], [160, 20, 120, 90], [300, 20, 130, 90], [20, 130, 120, 110], [160, 130, 270, 110], [20, 260, 200, 90], [240, 260, 190, 90]];
+            map.selectAll('rect.ref').data(quadras).join('rect').attr('class', 'ref')
+                .attr('x', d => d[0]).attr('y', d => d[1]).attr('width', d => d[2]).attr('height', d => d[3]).attr('rx', 4)
+                .attr('fill', 'none').attr('stroke', SOFTER).attr('stroke-dasharray', '5 5');
+            const desl = map.append('g');
+            desl.selectAll('rect').data(quadras).join('rect')
+                .attr('x', d => d[0]).attr('y', d => d[1]).attr('width', d => d[2]).attr('height', d => d[3]).attr('rx', 4)
+                .attr('fill', PRIMARY).attr('fill-opacity', 0.18).attr('stroke', PRIMARY).attr('stroke-width', 2);
+            const regua = map.append('g').attr('opacity', 0);
+            regua.append('line').attr('x1', 20).attr('x2', 56).attr('y1', 372).attr('y2', 372).attr('stroke', ERROR).attr('stroke-width', 3);
+            regua.append('text').attr('x', 66).attr('y', 377).attr('fill', ERROR).attr('font-size', 16).attr('font-weight', 700).text('≈ 60 m, e o QGIS desenha "no lugar"');
+            const legenda = map.append('text').attr('x', 20).attr('y', 410).attr('fill', SOFTER).attr('font-size', 13)
+                .text('tracejado: posição real · laranja: como o dado foi importado');
+
+            function run() {
+                nome.interrupt().text('São José').attr('fill', TEXT);
+                len.interrupt().text('length(nome) = 8').attr('fill', SOFT);
+                nome.transition().delay(1200).duration(0).text('SÃ£o JosÃ©').attr('fill', ERROR);
+                len.transition().delay(1200).duration(0).text('length(nome) = 10').attr('fill', ERROR);
+                desl.interrupt().attr('transform', null).transition().delay(600).duration(1400).ease(d3.easeCubicInOut)
+                    .attr('transform', 'translate(36,-22)');
+                regua.interrupt().attr('opacity', 0).transition().delay(2000).duration(500).attr('opacity', 1);
+                legenda.attr('opacity', 1);
+            }
+            window.__prjReplay = run;
+            onVisible(document.getElementById('prj-stage'), () => { run(); d3.interval(run, 6500); });
+        })();
+
+        // ===== SLIDE 5: código digitado, erros pulsam (loop) =====
+        (function () {
+            const LINES = [
+                ['c-com', '-- sem aspas: vira minúsculo'],
+                ['', '<span class="c-kw">CREATE TABLE</span> Bairros (Nome text);   <span class="c-com">-- cria bairros(nome)</span>'],
+                ['c-com', '-- com aspas: preserva e exige aspas para sempre'],
+                ['', '<span class="c-kw">CREATE TABLE</span> "Bairros" ("Nome Bairro" text);'],
+                ['', ''],
+                ['', '<span class="c-kw">SELECT</span> * <span class="c-kw">FROM</span> bairros <span class="c-kw">WHERE</span> nome = "Centro";'],
+                ['c-err', '-- ERROR: column "Centro" does not exist   (texto é \'aspas simples\')'],
+                ['', '<span class="c-kw">SELECT</span> ORDER <span class="c-kw">FROM</span> "BAIRROS_SUJO";'],
+                ['c-err', '-- ERROR: syntax error   (ORDER é palavra reservada)'],
+                ['', ''],
+                ['c-com', '-- nome com mais de 63 bytes: truncado, só um NOTICE']
+            ];
+            const pre = document.getElementById('code-nomes');
+                        function run() {
+                pre.innerHTML = '';
+                LINES.forEach((l, i) => setTimeout(() => {
+                    const span = document.createElement('div');
+                    if (l[0]) span.className = l[0];
+                    span.innerHTML = l[1] || '&nbsp;';
+                    const old = pre.querySelector('.c-caret'); if (old) old.remove();
+                    pre.appendChild(span);
+                    const c = document.createElement('span'); c.className = 'c-caret'; c.innerHTML = '&nbsp;';
+                    span.appendChild(c);
+                }, i * 380));
+            }
+            onVisible(pre, () => { run(); setInterval(run, 14000); });
+        })();
+
+        // ===== SLIDE 6: lupa revela o espaço invisível (loop) =====
+        (function () {
+            const W = 960, H = 150;
+            const svg = d3.select('#nbsp-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const tags = [
+                { x: 120, label: "'São José'", len: 'length = 8', nbsp: false },
+                { x: 540, label: "'São José '", len: 'length = 9', nbsp: true }
+            ];
+            const g = svg.selectAll('g.tag').data(tags).join('g').attr('class', 'tag').attr('transform', d => `translate(${d.x},30)`);
+            g.append('rect').attr('width', 300).attr('height', 64).attr('rx', 10)
+                .attr('fill', 'rgba(255,255,255,0.04)').attr('stroke', BORDER);
+            g.append('text').attr('x', 24).attr('y', 43).attr('font-family', 'monospace').attr('font-size', 30)
+                .attr('font-weight', 700).attr('fill', TEXT).text(d => d.label);
+            const lens = g.append('text').attr('x', 150).attr('y', 104).attr('text-anchor', 'middle')
+                .attr('font-family', 'monospace').attr('font-size', 16).attr('fill', SOFTER).text(d => d.len).attr('opacity', 0);
+            const eq = svg.append('text').attr('x', 480).attr('y', 72).attr('text-anchor', 'middle').attr('font-size', 34)
+                .attr('font-weight', 800).attr('fill', SOFT).text('=');
+            // marcador do NBSP antes da aspa final da 2ª etiqueta
+            const mark = svg.append('g').attr('transform', 'translate(735,62)').attr('opacity', 0);
+            mark.append('rect').attr('x', -9).attr('y', -26).attr('width', 18).attr('height', 34).attr('rx', 4)
+                .attr('fill', ERROR).attr('fill-opacity', 0.3).attr('stroke', ERROR);
+            mark.append('text').attr('y', 34).attr('text-anchor', 'middle').attr('fill', ERROR).attr('font-size', 12)
+                .attr('font-weight', 700).text('c2 a0');
+            const lupa = svg.append('g').attr('opacity', 0);
+            lupa.append('circle').attr('r', 38).attr('fill', 'rgba(255,255,255,0.03)').attr('stroke', PRIMARY).attr('stroke-width', 3);
+            lupa.append('line').attr('x1', 27).attr('y1', 27).attr('x2', 52).attr('y2', 52).attr('stroke', PRIMARY).attr('stroke-width', 6).attr('stroke-linecap', 'round');
+            function run() {
+                eq.interrupt().text('=').attr('fill', SOFT);
+                mark.interrupt().attr('opacity', 0); lens.interrupt().attr('opacity', 0);
+                lupa.interrupt().attr('opacity', 0).attr('transform', 'translate(140,62)')
+                    .transition().duration(400).attr('opacity', 1)
+                    .transition().duration(2600).ease(d3.easeCubicInOut).attr('transform', 'translate(735,62)')
+                    .transition().duration(800).attr('opacity', 0);
+                mark.transition().delay(3000).duration(400).attr('opacity', 1);
+                lens.transition().delay(3200).duration(400).attr('opacity', 1);
+                eq.transition().delay(3400).duration(0).text('≠').attr('fill', ERROR);
+            }
+            onVisible(document.getElementById('nbsp-stage'), () => { run(); d3.interval(run, 7000); });
+        })();
+
+        // ===== SLIDE 7: ranking texto × número (loop) =====
+        (function () {
+            const DATA = [
+                { nome: 'Jardim Coopagro', txt: '95', val: 95 },
+                { nome: 'Vila Industrial', txt: '180', val: 180 },
+                { nome: '(sem nome)', txt: '100,5', val: 100.5 },
+                { nome: 'Santa Clara', txt: '100', val: 100 }
+            ];
+            const ORD_TXT = ['95', '180', '100,5', '100'];           // ORDER BY texto DESC
+            const ORD_NUM = ['180', '100,5', '100', '95'];           // ORDER BY numérico DESC
+            const W = 960, H = 420, x0 = 230, barMax = 560, rowH = 70, y0 = 90;
+            const svg = d3.select('#ranking-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const titulo = svg.append('text').attr('x', 30).attr('y', 40).attr('font-family', 'monospace')
+                .attr('font-size', 20).attr('font-weight', 700).attr('fill', PRIMARY);
+            const x = d3.scaleLinear().domain([0, 180]).range([0, barMax]);
+            const rows = svg.selectAll('g.row').data(DATA).join('g').attr('class', 'row');
+            rows.append('text').attr('x', x0 - 16).attr('y', 30).attr('text-anchor', 'end').attr('fill', SOFT).attr('font-size', 18).text(d => d.nome);
+            const bars = rows.append('rect').attr('x', x0).attr('y', 8).attr('height', 34).attr('rx', 6).attr('width', 0);
+            const vals = rows.append('text').attr('y', 32).attr('font-family', 'monospace').attr('font-size', 18).attr('font-weight', 700);
+            const rank = rows.append('text').attr('x', 20).attr('y', 32).attr('font-size', 20).attr('font-weight', 800).attr('fill', SOFTER);
+            function place(order, modo) {
+                rows.transition().duration(900).ease(d3.easeCubicInOut)
+                    .attr('transform', d => `translate(0,${y0 + order.indexOf(d.txt) * rowH})`);
+                rank.text(d => (order.indexOf(d.txt) + 1) + 'º');
+                bars.transition().duration(900).attr('width', d => x(d.val))
+                    .attr('fill', d => order.indexOf(d.txt) === 0 ? (modo === 'txt' ? ERROR : PRIMARY) : 'rgba(255,255,255,0.12)');
+                vals.text(d => modo === 'txt' ? `'${d.txt}'` : d.val.toString().replace('.', ','))
+                    .attr('fill', d => order.indexOf(d.txt) === 0 ? (modo === 'txt' ? ERROR : PRIMARY) : SOFT)
+                    .transition().duration(900).attr('x', d => x0 + x(d.val) + 12);
+                titulo.text(modo === 'txt' ? "ORDER BY area_ha DESC   -- texto: '9' > '1'" : "ORDER BY replace(area_ha, ',', '.')::numeric DESC");
+            }
+            rows.attr('transform', d => `translate(0,${y0 + ORD_TXT.indexOf(d.txt) * rowH})`);
+            let modo = 'txt';
+            onVisible(document.getElementById('ranking-stage'), () => {
+                place(ORD_TXT, 'txt');
+                d3.interval(() => { modo = modo === 'txt' ? 'num' : 'txt'; place(modo === 'txt' ? ORD_TXT : ORD_NUM, modo); }, 3800);
+            });
+        })();
+
+        // ===== SLIDE 8: quadrado vira gravata-borboleta, área vai a zero (loop) =====
+        (function () {
+            const W = 560, H = 460;
+            const svg = d3.select('#gravata-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const A = [140, 110], B = [420, 110], C = [420, 330], D = [140, 330], X = [280, 220];
+            const line = d3.line();
+            const poly = svg.append('path').attr('fill', PRIMARY).attr('fill-opacity', 0.2).attr('stroke', PRIMARY).attr('stroke-width', 3);
+            const triA = svg.append('path').attr('d', line([A, B, X]) + 'Z').attr('fill', PRIMARY).attr('fill-opacity', 0).attr('stroke', 'none');
+            const triB = svg.append('path').attr('d', line([D, C, X]) + 'Z').attr('fill', ERROR).attr('fill-opacity', 0).attr('stroke', 'none');
+            const sA = svg.append('text').attr('x', 280).attr('y', 180).attr('font-size', 42).attr('font-weight', 800).attr('fill', PRIMARY).attr('text-anchor', 'middle').text('+').attr('opacity', 0);
+            const sB = svg.append('text').attr('x', 280).attr('y', 300).attr('font-size', 42).attr('font-weight', 800).attr('fill', ERROR).attr('text-anchor', 'middle').text('−').attr('opacity', 0);
+            const cruz = svg.append('circle').attr('cx', X[0]).attr('cy', X[1]).attr('r', 0).attr('fill', 'none').attr('stroke', ERROR).attr('stroke-width', 3);
+            const area = svg.append('text').attr('x', W / 2).attr('y', 400).attr('text-anchor', 'middle').attr('font-family', 'monospace').attr('font-size', 26).attr('font-weight', 800);
+            const tag = svg.append('text').attr('x', W / 2).attr('y', 60).attr('text-anchor', 'middle').attr('font-size', 18).attr('font-weight', 700);
+            const verts = svg.selectAll('circle.v').data([A, B, C, D]).join('circle').attr('class', 'v').attr('r', 6).attr('fill', TEXT);
+            const lerp = (p, q, t) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+            function setShape(t) { // t=0 quadrado A B C D, t=1 gravata A B D C (C e D trocam)
+                const c = lerp(C, D, t), d = lerp(D, C, t);
+                poly.attr('d', line([A, B, c, d]) + 'Z');
+                verts.data([A, B, c, d]).attr('cx', p => p[0]).attr('cy', p => p[1]);
+                const a = Math.abs(((B[0] - A[0]) * (c[1] - A[1]) - (c[0] - A[0]) * (B[1] - A[1])) / 2 + ((c[0] - A[0]) * (d[1] - A[1]) - (d[0] - A[0]) * (c[1] - A[1])) / 2);
+                area.text(`ST_Area = ${(a / 616).toFixed(0)} ha`).attr('fill', t > 0.98 ? ERROR : TEXT);
+            }
+            function run() {
+                svg.selectAll('*').interrupt();
+                setShape(0); poly.attr('opacity', 1).attr('fill-opacity', 0.2);
+                triA.attr('fill-opacity', 0).attr('transform', null); triB.attr('fill-opacity', 0).attr('transform', null).attr('fill', ERROR);
+                sA.attr('opacity', 0); sB.attr('opacity', 0).text('−').attr('fill', ERROR); cruz.attr('r', 0);
+                tag.text('polígono válido').attr('fill', SOFT);
+                svg.transition().delay(1200).duration(1800).ease(d3.easeCubicInOut).tween('shape', () => setShape)
+                    .on('end', () => {
+                        tag.text('Self-intersection: sem nenhum erro').attr('fill', ERROR);
+                        poly.transition().duration(400).attr('fill-opacity', 0);
+                        triA.transition().duration(400).attr('fill-opacity', 0.3);
+                        triB.transition().duration(400).attr('fill-opacity', 0.3);
+                        sA.transition().delay(300).attr('opacity', 1); sB.transition().delay(300).attr('opacity', 1);
+                        cruz.transition().duration(500).attr('r', 18).transition().duration(500).attr('r', 12);
+                        area.text('ST_Area = 0 ha').attr('fill', ERROR);
+                        setTimeout(() => {
+                            tag.text('ST_MakeValid: 2 triângulos válidos').attr('fill', PRIMARY);
+                            cruz.transition().attr('r', 0);
+                            triB.transition().duration(600).attr('fill', PRIMARY).attr('transform', 'translate(0,24)');
+                            triA.transition().duration(600).attr('transform', 'translate(0,-24)');
+                            sB.text('+').attr('fill', PRIMARY);
+                            poly.transition().duration(300).attr('opacity', 0);
+                            verts.attr('opacity', 0);
+                            area.text('ST_Area = 50 ha  (MultiPolygon)').attr('fill', PRIMARY);
+                        }, 2600);
+                    });
+                verts.attr('opacity', 1);
+            }
+            window.__gravataReplay = run;
+            onVisible(document.getElementById('gravata-stage'), () => { run(); d3.interval(run, 9000); });
+        })();
+
+        // ===== SLIDE 10: caminho longo encolhe até C:\gis\projeto\ (loop) =====
+        (function () {
+            const LONGO = 'C:\\Users\\João Silva\\OneDrive - Prefeitura\\Documentos\\Secretaria\\Geoprocessamento\\2026\\bairros.shp';
+            const CURTO = 'C:\\gis\\projeto\\bairros.shp';
+            const W = 960, H = 130;
+            const svg = d3.select('#caminho-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const txt = svg.append('text').attr('x', 20).attr('y', 58).attr('font-family', 'monospace').attr('font-size', 17).attr('font-weight', 700);
+            const barBg = svg.append('rect').attr('x', 20).attr('y', 82).attr('width', 920).attr('height', 10).attr('rx', 5).attr('fill', 'rgba(255,255,255,0.06)');
+            const bar = svg.append('rect').attr('x', 20).attr('y', 82).attr('height', 10).attr('rx', 5);
+            const cnt = svg.append('text').attr('x', 940).attr('y', 118).attr('text-anchor', 'end').attr('font-size', 14).attr('fill', SOFTER);
+            const scale = d3.scaleLinear().domain([0, 110]).range([0, 920]).clamp(true);
+            function paint(s, bad) {
+                txt.text(s).attr('fill', bad ? ERROR : PRIMARY);
+                bar.attr('width', scale(s.length)).attr('fill', bad ? ERROR : PRIMARY);
+                cnt.text(`${s.length} caracteres${bad ? ' · acento, espaço, OneDrive' : ' · curto, minúsculo, sem acento'}`);
+            }
+            function run() {
+                svg.interrupt(); paint(LONGO, true);
+                const prefix = 'C:\\', meio = LONGO.slice(3, LONGO.length - 'bairros.shp'.length);
+                svg.transition().delay(1800).duration(2200).ease(d3.easeCubicInOut).tween('shrink', () => t => {
+                    const k = Math.round(meio.length * (1 - t));
+                    const s = prefix + meio.slice(0, k) + 'bairros.shp';
+                    paint(t < 1 ? s : CURTO, t < 1);
+                    if (t >= 1) paint(CURTO, false);
+                });
+            }
+            onVisible(document.getElementById('caminho-stage'), () => { run(); d3.interval(run, 7000); });
+        })();
+
+        // === CONTROLES DE SLIDE: navegação card-a-card (progresso + botão + teclado) ===
+        (function () {
+            const cardSections = Array.from(document.querySelectorAll('body > section'));
+            if (cardSections.length === 0) return;
+
+            const progress = document.getElementById('mira-progress');
+            const nextBtn = document.getElementById('mira-next');
+            const nextIcon = document.getElementById('mira-next-icon');
+
+            const atBottom = () =>
+                (window.scrollY + window.innerHeight) >= (document.documentElement.scrollHeight - 100);
+
+            function currentIndex() {
+                const y = window.scrollY + window.innerHeight * 0.3;
+                let idx = -1;
+                for (let i = 0; i < cardSections.length; i++) {
+                    if (cardSections[i].offsetTop <= y) idx = i;
+                }
+                return idx;
+            }
+
+            function goTo(i) {
+                const idx = Math.max(0, Math.min(cardSections.length - 1, i));
+                cardSections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            window.addEventListener('scroll', () => {
+                const docH = document.documentElement.scrollHeight - window.innerHeight;
+                progress.style.width = (docH > 0 ? (window.scrollY / docH) * 100 : 0) + '%';
+                nextBtn.classList.toggle('visible', window.scrollY > 300);
+                nextIcon.setAttribute('data-lucide', atBottom() ? 'chevron-up' : 'chevron-down');
+                lucide.createIcons();
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (atBottom()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+                goTo(currentIndex() + 1);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key)) {
+                    e.preventDefault();
+                    goTo(currentIndex() + 1);
+                } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+                    e.preventDefault();
+                    const idx = currentIndex();
+                    if (idx <= 0) window.scrollTo({ top: 0, behavior: 'smooth' });
+                    else goTo(idx - 1);
+                } else if (e.key === 'Home') {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (e.key === 'End') {
+                    e.preventDefault();
+                    goTo(cardSections.length - 1);
+                } else if (e.key.toLowerCase() === 'f') {
+                    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                    else document.exitFullscreen();
+                }
+            });
+        })();
+    </script>
+
+    <!-- Modo edição (reordenar slides): tecla E ou ?edit=1 -->
+    <script src="mira/mira-edit.js" defer></script>
+    <!-- Edição livre estilo Canva (mover/redimensionar/rotacionar/duplicar/excluir/texto): tecla E -->
+    <script src="mira/mira-edit-free.js" defer></script>
+    <!-- mira-draw (desenhar sobre o slide): tecla P ou ?draw=1 -->
+    <script src="mira/mira-draw.js" defer></script>
+</body>
+
+</html>
