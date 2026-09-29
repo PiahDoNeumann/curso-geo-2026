@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Aula 04 · Simbologia graduada e rotulação</title>
+    <script src="assets/vendor/tailwind.js"></script>
+    <link href="assets/vendor/aos.css" rel="stylesheet">
+    <script src="assets/vendor/aos.js"></script>
+    <script src="assets/vendor/lucide.js"></script>
+    <script src="assets/vendor/d3.v7.min.js"></script>
+    <link href="assets/vendor/inter.css" rel="stylesheet">
+    <style>
+        /* @MIRA:THEME:START */
+/* MIRA THEME: mira-dark (padrão)
+   Identidade clássica do canal: fundo preto, laranja vibrante,
+   glassmorphism no estilo clássico do canal. */
+:root {
+    --mira-primary: #FF904D;
+    --mira-crop: #35D07F;
+    --mira-bg: #000000;
+    --mira-text: #ffffff;
+    --mira-text-soft: rgba(255, 255, 255, 0.70);
+    --mira-text-softer: rgba(255, 255, 255, 0.50);
+    --mira-card-bg: rgba(255, 255, 255, 0.05);
+    --mira-card-border: rgba(255, 255, 255, 0.10);
+    --mira-glow-soft: rgba(255, 144, 77, 0.15);
+    --mira-glow-strong: rgba(255, 144, 77, 0.25);
+    --mira-icon-bg: rgba(255, 144, 77, 0.15);
+    --mira-icon-border: rgba(255, 144, 77, 0.30);
+    --mira-pill-bg: rgba(255, 255, 255, 0.04);
+    --mira-pill-border: rgba(255, 255, 255, 0.08);
+    --mira-stage-glow: rgba(255, 144, 77, 0.06);
+    --mira-accent-2: #FFC766;
+}
+
+
+/* ============================================================
+   MIRA — base.css
+   Estrutura compartilhada por todos os temas.
+   Os temas definem apenas as CSS variables (--mira-*).
+   ============================================================ */
+
+body {
+    background: var(--mira-bg);
+    min-height: 100vh;
+    color: var(--mira-text);
+    font-family: 'Inter', sans-serif;
+}
+
+.primary-color { color: var(--mira-primary); }
+.primary-bg { background: var(--mira-primary); }
+
+.glass-card {
+    background: var(--mira-card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--mira-card-border);
+    box-shadow: 0 10px 30px var(--mira-glow-soft);
+    transition: all 0.3s ease;
+    border-radius: 0.75rem;
+}
+
+.glass-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px var(--mira-glow-strong);
+}
+
+.icon-hero {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    background: var(--mira-icon-bg);
+    border: 1px solid var(--mira-icon-border);
+}
+
+.attribute-pill {
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    transition: all 0.25s ease;
+    border-radius: 9999px;
+}
+
+.attribute-pill:hover {
+    background: var(--mira-icon-bg);
+    border-color: var(--mira-icon-border);
+    transform: translateY(-3px);
+}
+
+/* Palco de animação D3 — tamanho padrão do canvas */
+.anim-stage {
+    width: 100%;
+    height: clamp(400px, 60vh, 620px);
+    background: radial-gradient(circle at 50% 50%, var(--mira-stage-glow), transparent 70%);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.anim-stage svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.replay-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    color: var(--mira-text-soft);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.replay-btn:hover {
+    background: var(--mira-icon-bg);
+    color: var(--mira-primary);
+}
+
+.text-soft { color: var(--mira-text-soft); }
+.text-softer { color: var(--mira-text-softer); }
+
+@keyframes mira-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+@keyframes mira-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes mira-gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* @MIRA:THEME:END */
+
+        /* Cor de erro do deck (derivada do padrão Mira #FF6464) */
+        :root { --mira-error: #FF6464; --mira-error-bg: rgba(255, 100, 100, 0.15); --mira-error-border: rgba(255, 100, 100, 0.35); }
+
+        /* Diretriz de titulo da capa (CLAUDE.md): quebra equilibrada so no primeiro slide */
+        body > section:first-of-type h1,
+        body > section:first-of-type h2 { text-wrap: balance; }
+
+        /* === CONTROLES DE SLIDE (passagem card-a-card) === */
+        html { scroll-behavior: smooth; }
+        /* Scroll discreto (padrao Mira): a navegacao e por teclado/botao e o
+           progresso ja aparece na barra do topo; a scrollbar fica quase invisivel. */
+        html { scrollbar-width: thin; scrollbar-color: #2e2e2e #0d0d0d; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; background: #0d0d0d; }
+        ::-webkit-scrollbar-track { background: #0d0d0d; }
+        ::-webkit-scrollbar-thumb { background: #2e2e2e; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+        ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+
+        #mira-progress {
+            position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+            background: linear-gradient(90deg, var(--mira-primary), var(--mira-accent-2), var(--mira-primary));
+            background-size: 200% 100%;
+            animation: mira-shimmer 2s linear infinite;
+            z-index: 9999; transition: width 0.1s linear;
+            box-shadow: 0 0 10px var(--mira-glow-strong);
+        }
+
+        @keyframes mira-shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+
+        #mira-next {
+            position: fixed; bottom: 32px; right: 32px;
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--mira-primary); color: var(--mira-bg);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: none;
+            opacity: 0; transform: translateY(20px);
+            transition: all 0.3s ease; z-index: 9998;
+            box-shadow: 0 4px 20px var(--mira-glow-strong);
+        }
+        #mira-next.visible { opacity: 1; transform: translateY(0); }
+        #mira-next:hover { transform: translateY(-3px) scale(1.1); }
+    
+/* @MIRA:RESPONSIVE:START */
+/* ============================================================
+   MIRA — responsive.css  (camada de reflow mobile-first)
+   Objetivo: TODO slide 16:9 do Mira vira legível no celular em
+   retrato SEM arquivo mobile separado. O mesmo deck se reorganiza:
+   fontes encolhem, grids empilham, padding reduz, palcos escalam.
+
+   Estratégia: os decks nascem "desktop-first" (classes Tailwind com
+   tamanhos fixos: text-6xl, p-10, ...). Esta camada sobrescreve essas
+   classes abaixo de 640px. Usa !important de propósito — precisa
+   vencer o Tailwind CDN (injetado em runtime) em decks legados sem
+   reescrever o HTML. Os clamps têm teto ~= valor desktop, então em
+   telas largas nada muda; só encolhem no estreito.
+   ============================================================ */
+
+/* Guarda universal contra overflow horizontal (o "print cortado" no zap). */
+html, body { max-width: 100%; overflow-x: hidden; }
+img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
+
+@media (max-width: 640px) {
+
+  /* --- Tipografia fluida: encolhe títulos gigantes no celular --- */
+  .text-9xl { font-size: clamp(3rem, 12vw, 5rem)      !important; line-height: 1.05 !important; }
+  .text-8xl { font-size: clamp(2.75rem, 11vw, 4.5rem) !important; line-height: 1.06 !important; }
+  .text-7xl { font-size: clamp(2.25rem, 10vw, 3.75rem)!important; line-height: 1.08 !important; }
+  .text-6xl { font-size: clamp(2rem, 9vw, 3rem)       !important; line-height: 1.1  !important; }
+  .text-5xl { font-size: clamp(1.75rem, 8vw, 2.5rem)  !important; line-height: 1.12 !important; }
+  .text-4xl { font-size: clamp(1.5rem, 7vw, 2rem)     !important; line-height: 1.15 !important; }
+  .text-3xl { font-size: clamp(1.35rem, 6vw, 1.75rem) !important; line-height: 1.2  !important; }
+  .text-2xl { font-size: clamp(1.2rem, 5vw, 1.5rem)   !important; line-height: 1.25 !important; }
+  .text-xl  { font-size: clamp(1.05rem, 4.5vw, 1.25rem)!important; line-height: 1.3 !important; }
+
+  /* Títulos: quebram entre palavras; só partem uma palavra se ela sozinha
+     estourar a largura. Sem hyphens:auto — em PT ele hifena no meio
+     ("pode-rosas") e fica feio em título de display. */
+  h1, h2, h3 { overflow-wrap: break-word; }
+
+  /* --- Espaçamento: paddings de desktop sufocam o celular --- */
+  .p-12 { padding: 1.25rem !important; }
+  .p-10 { padding: 1.15rem !important; }
+  .p-8  { padding: 1.05rem !important; }
+  .px-12, .px-10 { padding-left: 1.15rem !important; padding-right: 1.15rem !important; }
+  .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .py-16 { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
+  .gap-8 { gap: 1rem !important; }
+  .gap-10, .gap-12 { gap: 1.25rem !important; }
+
+  /* --- Layout: seção de slide sempre alcançável pelo topo ---
+     min-h-screen + justify-center clipa o topo quando o conteúdo é
+     maior que a tela. No celular, ancora no topo e deixa rolar. */
+  .min-h-screen {
+    min-height: 100dvh !important;
+    height: auto !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+  .min-h-screen.justify-center,
+  .min-h-screen.items-center { justify-content: flex-start !important; }
+
+  /* --- Grids/flex de 2+ colunas empilham (redundante ao md: do
+         Tailwind, mas cobre grids sem breakpoint declarado). --- */
+  .grid-cols-2, .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr !important; }
+
+  /* --- Palco de animação (D3/SVG/canvas): nunca estoura a largura,
+         mantém proporção e encolhe a altura. --- */
+  .anim-stage {
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+    min-height: 0 !important;
+  }
+
+  /* --- Tabelas: fonte menor + rolagem horizontal se precisar. --- */
+  table { font-size: 0.82rem !important; }
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+  /* --- Controles flutuantes respeitam a safe-area do iPhone. --- */
+  #mira-next, #next-card {
+    bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+    right: max(1rem, env(safe-area-inset-right)) !important;
+    width: 44px !important; height: 44px !important;
+  }
+}
+/* @MIRA:RESPONSIVE:END */
+</style>
+</head>
+
+<body>
+    <!-- Controles de slide: barra de progresso + botão flutuante "próximo" -->
+    <div id="mira-progress"></div>
+    <button id="mira-next" aria-label="Próximo slide">
+        <i data-lucide="chevron-down" class="w-6 h-6" id="mira-next-icon"></i>
+    </button>
+
+    <!-- ============ SLIDE 1: CAPA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6">
+        <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover" style="opacity: 0.5;">
+            <source src="header-bg.mp4" type="video/mp4">
+        </video>
+        <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0.55) 40%, rgba(0,0,0,0.85));"></div>
+        <div class="relative z-10 text-center max-w-4xl" data-aos="fade-up">
+            <p class="attribute-pill inline-block px-5 py-2 text-sm tracking-widest uppercase text-soft mb-8">Escola de Governo · Toledo-PR</p>
+            <h1 class="text-5xl md:text-6xl font-black leading-tight mb-6">
+                O mapa que diz<br>
+                <span class="primary-color">quanto</span> e <span class="primary-color">quem</span>
+            </h1>
+            <p class="text-xl text-soft max-w-2xl mx-auto mb-10">Aula 4 de 10. Simbologia graduada e rotulação no QGIS, com os dados de Toledo.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-10">
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">4ª</p>
+                    <p class="text-softer text-sm mt-1">de 10 aulas</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">402</p>
+                    <p class="text-softer text-sm mt-1">acidentes de 2025</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">22</p>
+                    <p class="text-softer text-sm mt-1">bairros no Censo 2022</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">31982</p>
+                    <p class="text-softer text-sm mt-1">o SRC de tudo</p>
+                </div>
+            </div>
+            <div class="flex items-center justify-center gap-3 text-softer text-sm">
+                <i data-lucide="users" class="w-4 h-4 primary-color"></i> Romano e Valdecir
+                <span class="opacity-40">|</span>
+                <i data-lucide="calendar" class="w-4 h-4 primary-color"></i> 29/09/2026
+            </div>
+            <img src="logo.png" alt="Escola de Governo, Município de Toledo-PR" class="h-16 mx-auto mt-10 opacity-90">
+        </div>
+        <style>
+            .capa-stat { animation: capa-stat-glow 6s ease-in-out infinite; }
+            .capa-stat:nth-child(2) { animation-delay: 1.5s; }
+            .capa-stat:nth-child(3) { animation-delay: 3s; }
+            .capa-stat:nth-child(4) { animation-delay: 4.5s; }
+            @keyframes capa-stat-glow {
+                0%, 70%, 100% { border-color: var(--mira-card-border); box-shadow: 0 10px 30px var(--mira-glow-soft); }
+                15% { border-color: var(--mira-icon-border); box-shadow: 0 10px 40px var(--mira-glow-strong); }
+            }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 2: SRC 31982 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="globe-2" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Antes de tudo: <span class="primary-color">31982</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Padrão do curso: SIRGAS 2000 / UTM zona 22S, em metros</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 mb-6" data-aos="fade-up">
+            <div id="src-stage" class="anim-stage" style="height: 170px;"></div>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6 w-full max-w-5xl items-stretch">
+            <div class="glass-card p-8 src-card" data-aos="fade-right">
+                <div class="icon-hero mb-4"><i data-lucide="monitor" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-2">Projeto</h3>
+                <p class="text-soft">Canto inferior direito do QGIS: o botão do SRC mostra como o mapa é desenhado. Clique e escolha <b class="primary-color">EPSG:31982</b>.</p>
+            </div>
+            <div class="glass-card p-8 src-card" data-aos="fade-left">
+                <div class="icon-hero mb-4"><i data-lucide="layers" class="primary-color w-6 h-6"></i></div>
+                <h3 class="text-2xl font-bold mb-2">Camada</h3>
+                <p class="text-soft"><b>Propriedades &gt; Fonte</b> mostra em que SRC o dado está guardado. Todas as camadas da prática de hoje já estão em <b class="primary-color">31982</b>.</p>
+            </div>
+        </div>
+        <div class="attribute-pill px-6 py-3 mt-8 text-center max-w-4xl" data-aos="fade-up">
+            <i data-lucide="calendar-clock" class="inline w-4 h-4 mr-2 primary-color"></i>
+            SRC terá uma aula própria. Por enquanto a regra é uma só: <b>tudo em 31982</b>.
+        </div>
+        <style>
+            .src-card { animation: grid-spot 8s ease-in-out infinite; }
+            .src-card:nth-child(2) { animation-delay: 4s; }
+            @keyframes grid-spot { 0%, 25%, 100% { border-color: var(--mira-card-border); } 10% { border-color: var(--mira-icon-border); box-shadow: 0 10px 40px var(--mira-glow-strong); } }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 3: QUATRO RENDERIZADORES ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-10" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="palette" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">O quê <span class="primary-color">ou quanto?</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">A pergunta que escolhe a simbologia certa</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 w-full max-w-5xl">
+            <div class="glass-card p-5 rend-item" data-aos="fade-up" data-aos-delay="100">
+                <div class="rend-mini" data-mode="unico"></div>
+                <h3 class="text-xl font-bold mt-4 mb-1">Símbolo único</h3>
+                <p class="text-sm text-soft">Tudo igual. Visto na aula 2.</p>
+            </div>
+            <div class="glass-card p-5 rend-item" data-aos="fade-up" data-aos-delay="200">
+                <div class="rend-mini" data-mode="cat"></div>
+                <h3 class="text-xl font-bold mt-4 mb-1">Categorizado</h3>
+                <p class="text-sm text-soft">O campo diz <b class="primary-color">o quê</b>: tipo de acidente.</p>
+            </div>
+            <div class="glass-card p-5 rend-item" data-aos="fade-up" data-aos-delay="300">
+                <div class="rend-mini" data-mode="grad"></div>
+                <h3 class="text-xl font-bold mt-4 mb-1">Graduado</h3>
+                <p class="text-sm text-soft">O campo diz <b class="primary-color">quanto</b>: população, vítimas.</p>
+            </div>
+            <div class="glass-card p-5 rend-item" data-aos="fade-up" data-aos-delay="400">
+                <div class="rend-mini" data-mode="regra"></div>
+                <h3 class="text-xl font-bold mt-4 mb-1">Baseado em regras</h3>
+                <p class="text-sm text-soft">Só o que atende a uma <b class="primary-color">condição</b>.</p>
+            </div>
+        </div>
+        <p class="text-softer mt-8" data-aos="fade-up">Hoje: <b class="text-soft">graduado</b> e <b class="text-soft">regras</b>, com uma revisão rápida do categorizado.</p>
+    </section>
+
+    <!-- ============ SLIDE 4: CATEGORIZADO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="tags" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Uma cor <span class="primary-color">para cada tipo</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Revisão rápida com os 402 acidentes de trânsito de 2025</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-6 md:p-8 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.__catReplay && window.__catReplay()">↻ replay</button>
+            <div id="cat-stage" class="anim-stage" style="height: clamp(320px, 46vh, 460px);"></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Campo: <code class="primary-color">TIPO_ACID_</code></span>
+            <span class="attribute-pill px-5 py-2 text-sm">"Saída de pista" escrito diferente: padronize o texto</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Sem tipo: cai em "todos os outros valores"</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 5: GRADUADO POR COR ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="users" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Cor mais forte, <span class="primary-color">mais gente</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Bairros de Toledo pela população do Censo 2022</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-6 md:p-8 space-y-5" data-aos="fade-up">
+            <div class="pop-row" style="--v: 100; --c: var(--rampa-5);"><div class="flex justify-between mb-2"><span class="font-bold">Vila Pioneiro</span><span class="font-mono primary-color">18.782</span></div><div class="pop-track"><div class="pop-bar"></div></div></div>
+            <div class="pop-row" style="--v: 74.9; --c: var(--rampa-4);"><div class="flex justify-between mb-2"><span class="font-bold">Jardim Coopagro</span><span class="font-mono primary-color">14.074</span></div><div class="pop-track"><div class="pop-bar"></div></div></div>
+            <div class="pop-row" style="--v: 70.6; --c: var(--rampa-4);"><div class="flex justify-between mb-2"><span class="font-bold">Jardim Europa/América</span><span class="font-mono primary-color">13.260</span></div><div class="pop-track"><div class="pop-bar"></div></div></div>
+            <div class="pop-row" style="--v: 69.5; --c: var(--rampa-4);"><div class="flex justify-between mb-2"><span class="font-bold">Centro</span><span class="font-mono primary-color">13.058</span></div><div class="pop-track"><div class="pop-bar"></div></div></div>
+            <div class="pop-row" style="--v: 41; --c: var(--rampa-3);"><div class="flex justify-between mb-2"><span class="font-bold">Vila Industrial</span><span class="font-mono primary-color">7.788</span></div><div class="pop-track"><div class="pop-bar"></div></div></div>
+            <div class="pop-row" style="--v: 2.3; --c: var(--rampa-1);"><div class="flex justify-between mb-2"><span class="font-bold">Jardim Independência</span><span class="font-mono primary-color">432</span></div><div class="pop-track"><div class="pop-bar"></div></div></div>
+            <div class="flex items-center gap-3 pt-2 text-sm text-softer">
+                <span>menos</span>
+                <span class="rampa-leg" style="background: var(--rampa-1);"></span>
+                <span class="rampa-leg" style="background: var(--rampa-2);"></span>
+                <span class="rampa-leg" style="background: var(--rampa-3);"></span>
+                <span class="rampa-leg" style="background: var(--rampa-4);"></span>
+                <span class="rampa-leg" style="background: var(--rampa-5);"></span>
+                <span>mais</span>
+                <span class="ml-auto">rampa sequencial: uma cor, do fraco ao forte</span>
+            </div>
+        </div>
+        <div class="grid md:grid-cols-2 gap-4 w-full max-w-5xl mt-6" data-aos="fade-up">
+            <div class="attribute-pill px-5 py-3 text-sm" style="border-radius: 14px;">
+                <i data-lucide="database" class="inline w-4 h-4 mr-2 primary-color"></i>
+                Camada <code class="primary-color">bairros_ibge_2022</code>: 22 bairros, 131.938 habitantes. Sadia vem sem dado (sigilo do IBGE).
+            </div>
+            <div class="attribute-pill px-5 py-3 text-sm" style="border-radius: 14px;">
+                <i data-lucide="sliders-horizontal" class="inline w-4 h-4 mr-2 primary-color"></i>
+                Use o modo de classificação padrão do QGIS. Comparar modos fica para a aula de tabela de atributos.
+            </div>
+        </div>
+        <style>
+            :root {
+                --rampa-1: color-mix(in srgb, var(--mira-primary) 22%, var(--mira-bg));
+                --rampa-2: color-mix(in srgb, var(--mira-primary) 40%, var(--mira-bg));
+                --rampa-3: color-mix(in srgb, var(--mira-primary) 60%, var(--mira-bg));
+                --rampa-4: color-mix(in srgb, var(--mira-primary) 80%, var(--mira-bg));
+                --rampa-5: var(--mira-primary);
+            }
+            .pop-track { height: 14px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; }
+            .pop-bar { position: relative; height: 100%; width: 0; border-radius: 999px; background: var(--c); overflow: hidden; transition: width 1.4s cubic-bezier(.2,.8,.2,1); }
+            .pop-row.on .pop-bar { width: calc(var(--v) * 1%); }
+            .pop-bar::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent); transform: translateX(-100%); animation: pop-shine 4s ease-in-out infinite; }
+            .pop-row:nth-child(2) .pop-bar::after { animation-delay: .4s; }
+            .pop-row:nth-child(3) .pop-bar::after { animation-delay: .8s; }
+            .pop-row:nth-child(4) .pop-bar::after { animation-delay: 1.2s; }
+            .pop-row:nth-child(5) .pop-bar::after { animation-delay: 1.6s; }
+            .pop-row:nth-child(6) .pop-bar::after { animation-delay: 2s; }
+            @keyframes pop-shine { 0%, 40% { transform: translateX(-100%); } 80%, 100% { transform: translateX(100%); } }
+            .rampa-leg { width: 28px; height: 14px; border-radius: 4px; display: inline-block; }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 6: GRADUADO POR TAMANHO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="circle-dot" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Círculo maior, <span class="primary-color">mais vítimas</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">724 vítimas em 402 acidentes, de 0 a 8 por ocorrência</p>
+        </div>
+        <div class="grid md:grid-cols-5 gap-6 w-full max-w-5xl items-stretch">
+            <div class="glass-card md:col-span-3 p-4 relative" data-aos="fade-right">
+                <button class="replay-btn" onclick="window.__tamReplay && window.__tamReplay()">↻ replay</button>
+                <div id="tam-stage" class="anim-stage" style="height: clamp(320px, 50vh, 480px);"></div>
+            </div>
+            <div class="glass-card md:col-span-2 p-6 flex flex-col justify-center gap-4" data-aos="fade-left">
+                <p class="text-soft">Em <b>Graduado</b>, troque o <b>Método</b> de <b>Cor</b> para <b class="primary-color">Tamanho</b>: o QGIS aumenta o símbolo conforme o campo <code class="primary-color">VITIMAS</code>.</p>
+                <p class="text-soft">Quantidade de coisas se lê melhor em tamanho do que em cor.</p>
+                <div class="flex flex-wrap gap-2 pt-2">
+                    <span class="attribute-pill px-4 py-1 text-sm">Quantidade</span>
+                    <span class="attribute-pill px-4 py-1 text-sm">Tamanho</span>
+                    <span class="attribute-pill px-4 py-1 text-sm">Legenda em círculos</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 7: BASEADO EM REGRAS ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="filter" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Acenda só <span class="primary-color">o que importa</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">47 de 402 acidentes: graves e com 2 ou mais vítimas</p>
+        </div>
+        <div class="grid md:grid-cols-5 gap-6 w-full max-w-5xl items-stretch">
+            <div class="glass-card md:col-span-3 p-0 overflow-hidden" data-aos="fade-right">
+                <div class="flex items-center gap-2 px-5 py-3 border-b" style="border-color: var(--mira-card-border);">
+                    <span class="w-3 h-3 rounded-full" style="background: var(--mira-error);"></span>
+                    <span class="w-3 h-3 rounded-full primary-bg"></span>
+                    <span class="w-3 h-3 rounded-full" style="background: var(--mira-crop);"></span>
+                    <span class="text-softer text-sm ml-3 font-mono">regras_acidentes</span>
+                </div>
+                <pre id="code-regras" class="code-typed font-mono text-sm md:text-base leading-relaxed p-6 md:p-8 overflow-x-auto" style="min-height: 250px;"></pre>
+            </div>
+            <div class="glass-card md:col-span-2 p-4 flex flex-col" data-aos="fade-left">
+                <div id="waffle-stage" class="anim-stage" style="height: clamp(260px, 36vh, 340px);"></div>
+            </div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Campo entre <b class="primary-color">"aspas duplas"</b></span>
+            <span class="attribute-pill px-5 py-2 text-sm">Texto entre <b class="primary-color">'aspas simples'</b></span>
+            <span class="attribute-pill px-5 py-2 text-sm"><b class="primary-color">ELSE</b> pega todo o resto</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 8: EXERCÍCIO DE SIMBOLOGIA (CTA) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-16">
+        <div class="cta-breathe absolute inset-0 pointer-events-none"></div>
+        <div class="relative z-10 w-full max-w-5xl text-center" data-aos="zoom-in">
+            <div class="icon-hero mx-auto mb-6" style="width:72px;height:72px;border-radius:20px;">
+                <i data-lucide="mouse-pointer-click" class="primary-color w-9 h-9"></i>
+            </div>
+            <h2 class="text-4xl md:text-5xl font-black mb-3">Sua vez: <span class="primary-color">simbolize os acidentes</span></h2>
+            <p class="text-xl text-soft mb-10">10 minutos no QGIS com <code class="primary-color">ACIDENTES_TRANSITO</code>, depois salve o estilo</p>
+            <div class="grid md:grid-cols-3 gap-5 mb-10 text-left">
+                <div class="glass-card p-6 tarefa">
+                    <p class="text-4xl font-black primary-color mb-2 t-num">1</p>
+                    <p class="text-lg font-bold">Categorizado por <code>TIPO_ACID_</code></p>
+                </div>
+                <div class="glass-card p-6 tarefa">
+                    <p class="text-4xl font-black primary-color mb-2 t-num">2</p>
+                    <p class="text-lg font-bold">Graduado por tamanho em <code>VITIMAS</code></p>
+                </div>
+                <div class="glass-card p-6 tarefa">
+                    <p class="text-4xl font-black primary-color mb-2 t-num">3</p>
+                    <p class="text-lg font-bold">Regra: graves com 2 ou mais vítimas</p>
+                </div>
+            </div>
+            <p class="text-soft mb-8"><b>Estilo &gt; Salvar estilo</b> gera um arquivo <code class="primary-color">.qml</code>. Em outra camada ou outro projeto, <b>Estilo &gt; Carregar estilo</b> e ele volta igual.</p>
+            <span class="inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold primary-bg" style="color: var(--mira-bg); box-shadow: 0 4px 20px var(--mira-glow-strong);">
+                <i data-lucide="play" class="w-5 h-5"></i> Abrir o QGIS
+            </span>
+        </div>
+        <style>
+            .cta-breathe {
+                background: radial-gradient(ellipse at 50% 60%, var(--mira-glow-strong), transparent 65%);
+                animation: mira-pulse 4s ease-in-out infinite;
+            }
+            .t-num { display: inline-block; animation: q-bob 3s ease-in-out infinite; }
+            .tarefa:nth-child(2) .t-num { animation-delay: 1s; }
+            .tarefa:nth-child(3) .t-num { animation-delay: 2s; }
+            .tarefa:nth-child(4) .t-num { animation-delay: 3s; }
+            @keyframes q-bob { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-8px) rotate(-10deg); } 50% { transform: translateY(0) rotate(8deg); } }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 9: ONDE MORA O RÓTULO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-10" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="tag" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Onde mora <span class="primary-color">o rótulo</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Propriedades da camada &gt; Rótulos</p>
+        </div>
+        <div class="w-full max-w-5xl space-y-5">
+            <div class="glass-card p-6 md:p-8 flex gap-6 items-start lista-item" data-aos="fade-up" data-aos-delay="100">
+                <p class="text-5xl font-black primary-color w-12 shrink-0">1</p>
+                <div>
+                    <h3 class="text-2xl font-bold mb-1">Rótulos simples</h3>
+                    <p class="text-soft">Um mesmo estilo de texto para todas as feições da camada.</p>
+                </div>
+            </div>
+            <div class="glass-card p-6 md:p-8 flex gap-6 items-start lista-item" data-aos="fade-up" data-aos-delay="200">
+                <p class="text-5xl font-black primary-color w-12 shrink-0">2</p>
+                <div>
+                    <h3 class="text-2xl font-bold mb-1">Rótulos baseados em regras</h3>
+                    <p class="text-soft">Texto e estilo diferentes conforme uma condição, como na simbologia.</p>
+                </div>
+            </div>
+            <div class="glass-card p-6 md:p-8 flex gap-6 items-start lista-item" data-aos="fade-up" data-aos-delay="300">
+                <p class="text-5xl font-black primary-color w-12 shrink-0">3</p>
+                <div>
+                    <h3 class="text-2xl font-bold mb-1">Valor: campo ou expressão</h3>
+                    <p class="text-soft">Escolha um campo, como <code class="primary-color">"nome"</code>, ou abra o construtor de expressões no botão <b class="primary-color">ε</b> ao lado.</p>
+                </div>
+            </div>
+            <div class="glass-card p-6 md:p-8 flex gap-6 items-start lista-item" data-aos="fade-up" data-aos-delay="400">
+                <p class="text-5xl font-black primary-color w-12 shrink-0">4</p>
+                <div>
+                    <h3 class="text-2xl font-bold mb-1">As abas de hoje</h3>
+                    <p class="text-soft"><b>Texto</b>, <b>Buffer</b>, <b>Posicionamento</b> e <b>Renderização</b>. O resto pode esperar.</p>
+                </div>
+            </div>
+        </div>
+        <style>
+            .lista-item { animation: lista-spot 12s ease-in-out infinite; }
+            .lista-item:nth-child(2) { animation-delay: 3s; }
+            .lista-item:nth-child(3) { animation-delay: 6s; }
+            .lista-item:nth-child(4) { animation-delay: 9s; }
+            @keyframes lista-spot { 0%, 25%, 100% { transform: translateX(0); border-color: var(--mira-card-border); } 10% { transform: translateX(10px); border-color: var(--mira-icon-border); box-shadow: 0 10px 40px var(--mira-glow-strong); } }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 10: POSIÇÃO POR GEOMETRIA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="move" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Cada geometria, <span class="primary-color">uma posição</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Ponto, linha e polígono pedem colocação diferente</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-6 md:p-8 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.__posReplay && window.__posReplay()">↻ replay</button>
+            <div id="pos-stage" class="anim-stage" style="height: clamp(300px, 44vh, 420px);"></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm"><b class="primary-color">Ponto:</b> ao redor do símbolo</span>
+            <span class="attribute-pill px-5 py-2 text-sm"><b class="primary-color">Linha:</b> curvo, seguindo o traçado</span>
+            <span class="attribute-pill px-5 py-2 text-sm"><b class="primary-color">Polígono:</b> horizontal, no centro</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 11: HALO E PRIORIDADE ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="layers" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Legível e <span class="primary-color">sem briga</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Contraste para ler; prioridade para decidir quem aparece</p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6 w-full max-w-5xl items-stretch">
+            <div class="glass-card p-6 md:p-8" data-aos="fade-right">
+                <div id="halo-stage" class="anim-stage mb-5" style="height: 180px;"></div>
+                <h3 class="text-2xl font-bold mb-2">Halo <span class="text-softer text-lg font-normal">(aba Buffer)</span></h3>
+                <p class="text-soft">Texto sobre a ortofoto some. Um contorno de 1 mm em volta das letras, na cor oposta à do texto, devolve a leitura.</p>
+            </div>
+            <div class="glass-card p-6 md:p-8" data-aos="fade-left">
+                <div id="prio-stage" class="anim-stage mb-5" style="height: 180px;"></div>
+                <h3 class="text-2xl font-bold mb-2">Prioridade <span class="text-softer text-lg font-normal">(aba Renderização)</span></h3>
+                <p class="text-soft">Rótulos que colidem são escondidos pelo QGIS. A prioridade, de 0 a 10, decide quem fica.</p>
+            </div>
+        </div>
+        <div class="attribute-pill px-6 py-3 mt-8 text-center max-w-4xl" data-aos="fade-up">
+            <i data-lucide="triangle-alert" class="inline w-4 h-4 mr-2" style="color: var(--mira-error);"></i>
+            Evite marcar "mostrar todos os rótulos, incluindo colisões": o mapa vira uma sopa de letras.
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 12: RÓTULOS POR ESCALA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-10" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="zoom-in" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Cada escala, <span class="primary-color">seus rótulos</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Visibilidade por escala: o maior remédio contra mapa poluído</p>
+        </div>
+        <div class="w-full max-w-4xl relative pl-10" data-aos="fade-up">
+            <div class="absolute left-3 top-2 bottom-2 w-px" style="background: var(--mira-card-border);"></div>
+            <div class="esc-dot"></div>
+            <div class="space-y-5">
+                <div class="glass-card p-5 md:p-6 esc-step">
+                    <p class="font-mono primary-color font-bold">1:100.000 · de longe</p>
+                    <p class="text-lg mt-1">Mostrar só o <b>nome dos bairros</b></p>
+                </div>
+                <div class="glass-card p-5 md:p-6 esc-step">
+                    <p class="font-mono primary-color font-bold">1:50.000</p>
+                    <p class="text-lg mt-1">Acrescentar o nome das <b>estradas rurais</b></p>
+                </div>
+                <div class="glass-card p-5 md:p-6 esc-step">
+                    <p class="font-mono primary-color font-bold">1:10.000</p>
+                    <p class="text-lg mt-1">Acrescentar os <b>acidentes</b></p>
+                </div>
+                <div class="glass-card p-5 md:p-6 esc-step">
+                    <p class="font-mono primary-color font-bold">1:2.000 · de perto</p>
+                    <p class="text-lg mt-1">Acrescentar as <b>quadras</b></p>
+                </div>
+            </div>
+        </div>
+        <div class="attribute-pill px-6 py-3 mt-8 text-center max-w-4xl" data-aos="fade-up">
+            <i data-lucide="settings-2" class="inline w-4 h-4 mr-2 primary-color"></i>
+            Aba <b>Renderização</b> &gt; <b>Visibilidade dependente da escala</b>: defina a escala mínima e a máxima.
+        </div>
+        <style>
+            .esc-step { animation: esc-spot 12s ease-in-out infinite; }
+            .esc-step:nth-child(2) { animation-delay: 3s; }
+            .esc-step:nth-child(3) { animation-delay: 6s; }
+            .esc-step:nth-child(4) { animation-delay: 9s; }
+            @keyframes esc-spot { 0%, 25%, 100% { border-color: var(--mira-card-border); transform: translateX(0); } 8%, 18% { border-color: var(--mira-icon-border); box-shadow: 0 10px 40px var(--mira-glow-strong); transform: translateX(8px); } }
+            .esc-dot { position: absolute; left: 6px; top: 0; width: 15px; height: 15px; border-radius: 50%; background: var(--mira-primary); box-shadow: 0 0 16px var(--mira-primary); animation: esc-move 12s ease-in-out infinite; }
+            @keyframes esc-move { 0%, 100% { top: 2%; } 25% { top: 27%; } 50% { top: 52%; } 75% { top: 77%; } 95% { top: 94%; } }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 13: EXPRESSÕES NO RÓTULO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="braces" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Rótulo que <span class="primary-color">junta campos</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">O construtor de expressões monta o texto para você</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-0 overflow-hidden" data-aos="fade-up">
+            <div class="flex items-center gap-2 px-5 py-3 border-b" style="border-color: var(--mira-card-border);">
+                <span class="w-3 h-3 rounded-full" style="background: var(--mira-error);"></span>
+                <span class="w-3 h-3 rounded-full primary-bg"></span>
+                <span class="w-3 h-3 rounded-full" style="background: var(--mira-crop);"></span>
+                <span class="text-softer text-sm ml-3 font-mono">construtor_de_expressoes</span>
+            </div>
+            <pre id="code-expr" class="code-typed font-mono text-sm md:text-base leading-relaxed p-6 md:p-8 overflow-x-auto" style="min-height: 330px;"></pre>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm"><code class="primary-color">||</code> junta textos</span>
+            <span class="attribute-pill px-5 py-2 text-sm"><code class="primary-color">'\n'</code> quebra a linha</span>
+            <span class="attribute-pill px-5 py-2 text-sm"><code class="primary-color">format_number</code> põe o ponto de milhar</span>
+            <span class="attribute-pill px-5 py-2 text-sm"><code class="primary-color">concat</code> não some com campo vazio</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 14: MINI-DESAFIO (CTA) ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-16">
+        <div class="cta-breathe absolute inset-0 pointer-events-none"></div>
+        <div class="relative z-10 w-full max-w-5xl text-center" data-aos="zoom-in">
+            <div class="icon-hero mx-auto mb-6" style="width:72px;height:72px;border-radius:20px;">
+                <i data-lucide="map" class="primary-color w-9 h-9"></i>
+            </div>
+            <h2 class="text-4xl md:text-5xl font-black mb-3">Desafio: <span class="primary-color">seu mapa de bairros</span></h2>
+            <p class="text-xl text-soft mb-10">Graduado e rotulado, legível de longe e de perto</p>
+            <div class="grid md:grid-cols-2 gap-5 mb-10 text-left">
+                <div class="glass-card p-6 tarefa flex gap-4 items-start">
+                    <p class="text-4xl font-black primary-color t-num">1</p>
+                    <p class="text-lg font-bold"><code>bairros_ibge_2022</code> graduado por <code>populacao</code></p>
+                </div>
+                <div class="glass-card p-6 tarefa flex gap-4 items-start">
+                    <p class="text-4xl font-black primary-color t-num">2</p>
+                    <p class="text-lg font-bold">Rótulo com nome e população, com ponto de milhar</p>
+                </div>
+                <div class="glass-card p-6 tarefa flex gap-4 items-start">
+                    <p class="text-4xl font-black primary-color t-num">3</p>
+                    <p class="text-lg font-bold">Halo nos rótulos e visibilidade por escala</p>
+                </div>
+                <div class="glass-card p-6 tarefa flex gap-4 items-start">
+                    <p class="text-4xl font-black primary-color t-num">4</p>
+                    <p class="text-lg font-bold">Acidentes graves destacados por regra, por cima</p>
+                </div>
+            </div>
+            <p class="text-soft mb-8">Arquivo: <code class="primary-color">populacao_toledo_ibge2022.gpkg</code>, já em 31982. Teste em duas escalas antes de dar por pronto.</p>
+            <span class="inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold primary-bg" style="color: var(--mira-bg); box-shadow: 0 4px 20px var(--mira-glow-strong);">
+                <i data-lucide="flag" class="w-5 h-5"></i> Começar o desafio
+            </span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 15: RESUMO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="table" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Uma ferramenta <span class="primary-color">por pergunta</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Guarde esta tabela para a prática</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-6 md:p-8" data-aos="fade-up">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="text-softer text-sm uppercase tracking-wider border-b" style="border-color: var(--mira-card-border);">
+                            <th class="py-3 pr-4">Pergunta</th>
+                            <th class="py-3 pr-4">Ferramenta</th>
+                            <th class="py-3">Exemplo de hoje</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-soft">
+                        <tr class="tab-row border-b" style="border-color: var(--mira-card-border);">
+                            <td class="py-3 pr-4 font-bold primary-color">O que é?</td>
+                            <td class="py-3 pr-4">Categorizado</td>
+                            <td class="py-3">Tipo de acidente</td>
+                        </tr>
+                        <tr class="tab-row border-b" style="border-color: var(--mira-card-border);">
+                            <td class="py-3 pr-4 font-bold primary-color">Quanto tem?</td>
+                            <td class="py-3 pr-4">Graduado, por cor ou tamanho</td>
+                            <td class="py-3">População do bairro, vítimas</td>
+                        </tr>
+                        <tr class="tab-row border-b" style="border-color: var(--mira-card-border);">
+                            <td class="py-3 pr-4 font-bold primary-color">Só alguns?</td>
+                            <td class="py-3 pr-4">Baseado em regras</td>
+                            <td class="py-3">Graves com 2 ou mais vítimas</td>
+                        </tr>
+                        <tr class="tab-row border-b" style="border-color: var(--mira-card-border);">
+                            <td class="py-3 pr-4 font-bold primary-color">Quem é?</td>
+                            <td class="py-3 pr-4">Rótulo com campo ou expressão</td>
+                            <td class="py-3">Nome do bairro e população</td>
+                        </tr>
+                        <tr class="tab-row">
+                            <td class="py-3 pr-4 font-bold primary-color">Texto demais?</td>
+                            <td class="py-3 pr-4">Halo, prioridade e escala</td>
+                            <td class="py-3">Estradas só a partir de 1:50.000</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <style>
+            .tab-row { animation: tab-scan 10s ease-in-out infinite; }
+            .tab-row:nth-child(2) { animation-delay: 2s; }
+            .tab-row:nth-child(3) { animation-delay: 4s; }
+            .tab-row:nth-child(4) { animation-delay: 6s; }
+            .tab-row:nth-child(5) { animation-delay: 8s; }
+            @keyframes tab-scan { 0%, 20%, 100% { background: transparent; } 8% { background: var(--mira-glow-soft); } }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 16: FECHO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-16">
+        <div class="relative z-10 text-center max-w-4xl" data-aos="zoom-in">
+            <div class="icon-hero mx-auto mb-8" style="width:72px;height:72px;border-radius:20px;">
+                <i data-lucide="quote" class="primary-color w-9 h-9"></i>
+            </div>
+            <h2 class="text-5xl md:text-6xl font-black mb-8">Um mapa <span class="primary-color">que não grita</span></h2>
+            <blockquote class="text-2xl md:text-3xl text-soft leading-snug mb-12">
+                "Um bom mapa não mostra tudo. Mostra <span class="primary-color font-bold">o que importa, na escala certa</span>."
+            </blockquote>
+            <div class="flex flex-wrap items-center justify-center gap-3 mb-10">
+                <span class="attribute-pill check-pill px-5 py-2">Categorizado</span>
+                <span class="attribute-pill check-pill px-5 py-2">Graduado</span>
+                <span class="attribute-pill check-pill px-5 py-2">Regras</span>
+                <span class="attribute-pill check-pill px-5 py-2">.qml</span>
+                <span class="attribute-pill check-pill px-5 py-2">Rótulo</span>
+                <span class="attribute-pill check-pill px-5 py-2">Escala</span>
+            </div>
+            <p class="text-softer mb-10">A camada simbolizada e rotulada de hoje é a base do mapa final no compositor de impressão.</p>
+            <img src="logo.png" alt="Escola de Governo, Município de Toledo-PR" class="h-14 mx-auto opacity-90">
+        </div>
+        <style>
+            .check-pill { animation: check-on 9s ease-in-out infinite; }
+            .check-pill:nth-child(2) { animation-delay: 1.5s; }
+            .check-pill:nth-child(3) { animation-delay: 3s; }
+            .check-pill:nth-child(4) { animation-delay: 4.5s; }
+            .check-pill:nth-child(5) { animation-delay: 6s; }
+            .check-pill:nth-child(6) { animation-delay: 7.5s; }
+            @keyframes check-on { 0%, 18%, 100% { color: var(--mira-text-soft); border-color: var(--mira-pill-border); } 6% { color: var(--mira-primary); border-color: var(--mira-icon-border); background: var(--mira-icon-bg); } }
+        </style>
+    </section>
+
+    <style>
+        .code-typed .c-com { color: var(--mira-text-softer); }
+        .code-typed .c-kw { color: var(--mira-primary); font-weight: 700; }
+        .code-typed .c-str { color: var(--mira-accent-2); }
+        .code-typed .c-out { color: var(--mira-crop); }
+        .code-typed .c-caret { display: inline-block; width: .6em; background: var(--mira-primary); animation: caret-blink 1s steps(1) infinite; }
+        @keyframes caret-blink { 50% { opacity: 0; } }
+    </style>
+
+    <script>
+        AOS.init({ duration: 800, once: true });
+        lucide.createIcons();
+
+        const cssVar = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+        const PRIMARY = cssVar('--mira-primary');
+        const ACCENT = cssVar('--mira-accent-2');
+        const CROP = cssVar('--mira-crop');
+        const ERROR = cssVar('--mira-error');
+        const SOFT = cssVar('--mira-text-soft');
+        const SOFTER = cssVar('--mira-text-softer');
+        const BORDER = cssVar('--mira-card-border');
+        const TEXT = cssVar('--mira-text');
+        const BG = cssVar('--mira-bg');
+        const GHOST = 'rgba(255,255,255,0.14)';
+
+        // Dispara a entrada quando o slide aparece; o loop continua depois
+        function onVisible(el, fn) {
+            let done = false;
+            new IntersectionObserver((ents, obs) => {
+                if (!done && ents[0].isIntersecting) { done = true; obs.disconnect(); fn(); }
+            }, { threshold: 0.35 }).observe(el);
+        }
+        // Pseudoaleatório com semente: o desenho é sempre o mesmo
+        function rng(seed) { return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
+
+        // Digitação de código linha a linha, com cursor (loop)
+        function typeCode(id, LINES, every) {
+            const pre = document.getElementById(id);
+            function run() {
+                pre.innerHTML = '';
+                LINES.forEach((l, i) => setTimeout(() => {
+                    const div = document.createElement('div');
+                    if (l[0]) div.className = l[0];
+                    div.innerHTML = l[1] || '&nbsp;';
+                    const old = pre.querySelector('.c-caret'); if (old) old.remove();
+                    pre.appendChild(div);
+                    const c = document.createElement('span'); c.className = 'c-caret'; c.innerHTML = '&nbsp;';
+                    div.appendChild(c);
+                }, i * 420));
+            }
+            onVisible(pre, () => { run(); setInterval(run, every); });
+        }
+
+        // ===== SLIDE 2: camadas desalinhadas se encaixam em 31982 (loop) =====
+        (function () {
+            const W = 960, H = 170;
+            const svg = d3.select('#src-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const quadras = [[40, 30, 90, 50], [145, 30, 110, 50], [270, 30, 80, 50], [40, 95, 150, 50], [205, 95, 145, 50]];
+            const pts = [[92, 88], [200, 58], [310, 120], [120, 140], [260, 70]];
+            const map = svg.append('g').attr('transform', 'translate(40,0)');
+            map.selectAll('rect').data(quadras).join('rect')
+                .attr('x', d => d[0]).attr('y', d => d[1]).attr('width', d => d[2]).attr('height', d => d[3]).attr('rx', 4)
+                .attr('fill', 'rgba(255,255,255,0.04)').attr('stroke', SOFTER);
+            const camada = map.append('g');
+            camada.selectAll('circle').data(pts).join('circle').attr('cx', d => d[0]).attr('cy', d => d[1]).attr('r', 7)
+                .attr('fill', PRIMARY).attr('stroke', BG).attr('stroke-width', 2);
+            const aviso = map.append('text').attr('x', 400).attr('y', 70).attr('font-size', 16).attr('font-weight', 700);
+            const sub = map.append('text').attr('x', 400).attr('y', 96).attr('font-size', 14).attr('fill', SOFTER);
+            const selo = svg.append('g').attr('transform', 'translate(690,60)');
+            const seloBox = selo.append('rect').attr('width', 220).attr('height', 54).attr('rx', 27)
+                .attr('fill', 'rgba(255,255,255,0.04)').attr('stroke', BORDER).attr('stroke-width', 2);
+            const seloTxt = selo.append('text').attr('x', 110).attr('y', 35).attr('text-anchor', 'middle')
+                .attr('font-family', 'monospace').attr('font-size', 22).attr('font-weight', 800).attr('fill', SOFTER).text('EPSG:31982');
+            function run() {
+                camada.interrupt().attr('transform', 'translate(70,-34)').attr('opacity', 0.9);
+                aviso.text('SRC diferente: a camada cai fora do lugar').attr('fill', ERROR);
+                sub.text('pontos longe das quadras');
+                seloBox.interrupt().attr('stroke', BORDER).attr('fill', 'rgba(255,255,255,0.04)');
+                seloTxt.interrupt().attr('fill', SOFTER);
+                seloBox.transition().delay(1600).duration(400).attr('stroke', PRIMARY).attr('fill', cssVar('--mira-icon-bg'));
+                seloTxt.transition().delay(1600).duration(400).attr('fill', PRIMARY);
+                camada.transition().delay(1900).duration(1300).ease(d3.easeCubicInOut).attr('transform', 'translate(0,0)')
+                    .on('end', () => { aviso.text('Tudo em 31982: as camadas se encaixam').attr('fill', PRIMARY); sub.text('medida em metros, sem surpresa'); });
+            }
+            onVisible(document.getElementById('src-stage'), () => { run(); d3.interval(run, 7000); });
+        })();
+
+        // ===== SLIDE 3: quatro mini-mapas, um estilo cada (loop) =====
+        (function () {
+            const CAT = [PRIMARY, CROP, ACCENT];
+            const P = [];
+            for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) P.push({ x: 30 + c * 50, y: 22 + r * 36, k: (r * 3 + c) % 3, v: (r * 3 + c) });
+            const minis = [];
+            document.querySelectorAll('.rend-mini').forEach(el => {
+                const svg = d3.select(el).append('svg').attr('viewBox', '0 0 160 110').style('width', '100%').style('height', '110px');
+                const dots = svg.selectAll('circle').data(P).join('circle').attr('cx', d => d.x).attr('cy', d => d.y).attr('r', 7).attr('fill', GHOST);
+                minis.push({ mode: el.dataset.mode, dots });
+            });
+            function styleOf(mode) {
+                if (mode === 'unico') return { fill: () => PRIMARY, r: () => 7, op: () => 1 };
+                if (mode === 'cat') return { fill: d => CAT[d.k], r: () => 7, op: () => 1 };
+                if (mode === 'grad') return { fill: () => PRIMARY, r: d => 3 + d.v * 1.3, op: d => 0.35 + d.v * 0.08 };
+                return { fill: d => (d.v === 4 || d.v === 8) ? ERROR : GHOST, r: d => (d.v === 4 || d.v === 8) ? 10 : 5, op: () => 1 };
+            }
+            function run() {
+                minis.forEach((m, i) => {
+                    const s = styleOf(m.mode);
+                    m.dots.interrupt().attr('fill', GHOST).attr('r', 7).attr('opacity', 1)
+                        .transition().delay(300 + i * 700).duration(700)
+                        .attr('fill', s.fill).attr('r', s.r).attr('opacity', s.op);
+                });
+            }
+            onVisible(document.querySelector('.rend-mini'), () => { run(); d3.interval(run, 6500); });
+        })();
+
+        // ===== SLIDE 4: pontos cinza ganham cor por tipo; legenda se monta (loop) =====
+        (function () {
+            const W = 960, H = 460;
+            const svg = d3.select('#cat-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const TIPOS = [
+                { nome: 'COLISÃO', cor: PRIMARY },
+                { nome: 'ATROPELAMENTO', cor: CROP },
+                { nome: 'CAPOTAMENTO', cor: ACCENT },
+                { nome: 'Saída de pista', cor: TEXT, alerta: true },
+                { nome: 'todos os outros valores', cor: SOFTER }
+            ];
+            const rand = rng(42);
+            const pts = d3.range(120).map(i => ({ x: 40 + rand() * 540, y: 40 + rand() * 380, t: i === 7 ? 4 : i % 4 }));
+            svg.append('rect').attr('x', 20).attr('y', 20).attr('width', 580).attr('height', 420).attr('rx', 10)
+                .attr('fill', 'rgba(255,255,255,0.02)').attr('stroke', BORDER);
+            const dots = svg.selectAll('circle.p').data(pts).join('circle').attr('class', 'p')
+                .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', 6).attr('stroke', BG).attr('stroke-width', 1.5);
+            const leg = svg.append('g').attr('transform', 'translate(640,70)');
+            leg.append('text').text('Legenda: TIPO_ACID_').attr('fill', SOFTER).attr('font-size', 15).attr('font-weight', 700);
+            const items = leg.selectAll('g.i').data(TIPOS).join('g').attr('class', 'i').attr('transform', (d, i) => `translate(0,${40 + i * 58})`);
+            items.append('circle').attr('cx', 12).attr('cy', 0).attr('r', 9).attr('fill', d => d.cor);
+            items.append('text').attr('x', 32).attr('y', 6).attr('font-size', 19).attr('font-weight', 700).attr('fill', d => d.cor === SOFTER ? SOFTER : TEXT).text(d => d.nome);
+            const alerta = items.filter(d => d.alerta).append('text').attr('x', 32).attr('y', 28).attr('font-size', 13).attr('fill', ERROR)
+                .text('caixa diferente das outras');
+            function run() {
+                dots.interrupt().attr('fill', GHOST).attr('r', 6);
+                items.interrupt().attr('opacity', 0);
+                alerta.interrupt().attr('opacity', 0);
+                dots.transition().delay(d => 600 + d.t * 700 + Math.random() * 300).duration(500)
+                    .attr('fill', d => TIPOS[d.t].cor).attr('r', d => d.t === 4 ? 9 : 6);
+                items.transition().delay((d, i) => 600 + i * 700).duration(400).attr('opacity', 1);
+                alerta.transition().delay(4400).duration(300).attr('opacity', 1)
+                    .transition().duration(600).attr('opacity', 0.3).transition().duration(600).attr('opacity', 1);
+            }
+            window.__catReplay = run;
+            onVisible(document.getElementById('cat-stage'), () => { run(); d3.interval(run, 8000); });
+        })();
+
+        // ===== SLIDE 5: barras de população crescem; brilho percorre (loop no CSS) =====
+        (function () {
+            const rows = document.querySelectorAll('.pop-row');
+            onVisible(rows[0], () => rows.forEach((r, i) => setTimeout(() => r.classList.add('on'), i * 180)));
+        })();
+
+        // ===== SLIDE 6: pontos iguais inflam conforme as vítimas (loop) =====
+        (function () {
+            const W = 560, H = 460;
+            const svg = d3.select('#tam-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const rand = rng(7);
+            const DIST = [0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 8];
+            const pts = d3.range(30).map(() => ({ x: 40 + rand() * 330, y: 50 + rand() * 370, v: DIST[Math.floor(rand() * DIST.length)] }));
+            const r = d3.scaleSqrt().domain([0, 8]).range([3, 30]);
+            const dots = svg.selectAll('circle.p').data(pts).join('circle').attr('class', 'p')
+                .attr('cx', d => d.x).attr('cy', d => d.y).attr('fill', PRIMARY).attr('stroke', BG).attr('stroke-width', 1.5);
+            // legenda de círculos aninhados
+            const leg = svg.append('g').attr('transform', 'translate(450,330)');
+            leg.append('text').attr('x', 0).attr('y', -120).attr('text-anchor', 'middle').attr('fill', SOFTER).attr('font-size', 14).attr('font-weight', 700).text('VITIMAS');
+            [8, 4, 1].forEach(v => {
+                leg.append('circle').attr('cx', 0).attr('cy', -r(v)).attr('r', r(v)).attr('fill', 'none').attr('stroke', SOFT);
+                leg.append('line').attr('x1', 0).attr('x2', r(8) + 14).attr('y1', -2 * r(v)).attr('y2', -2 * r(v)).attr('stroke', SOFTER).attr('stroke-dasharray', '2 3');
+                leg.append('text').attr('x', r(8) + 18).attr('y', -2 * r(v) + 5).attr('fill', SOFT).attr('font-size', 14).text(v);
+            });
+            const maior = dots.filter(d => d.v === d3.max(pts, p => p.v));
+            let pulse;
+            function run() {
+                if (pulse) pulse.stop();
+                dots.interrupt().attr('r', 6).attr('fill-opacity', 0.9);
+                dots.transition().delay((d, i) => 800 + i * 40).duration(900).ease(d3.easeBackOut)
+                    .attr('r', d => r(d.v)).attr('fill-opacity', 0.55);
+                pulse = d3.timeout(() => {
+                    pulse = d3.interval(() => {
+                        maior.transition().duration(500).attr('fill-opacity', 0.95).transition().duration(700).attr('fill-opacity', 0.55);
+                    }, 1400);
+                }, 2600);
+            }
+            window.__tamReplay = run;
+            onVisible(document.getElementById('tam-stage'), () => { run(); d3.interval(run, 9000); });
+        })();
+
+        // ===== SLIDE 7: regra digitada + 402 quadradinhos, 47 acendem (loop) =====
+        typeCode('code-regras', [
+            ['c-com', '-- Regra 1: destaque'],
+            ['', '<span class="c-str">"GRAVIDADE"</span> = <span class="c-str">\'Grave\'</span> <span class="c-kw">AND</span> <span class="c-str">"VITIMAS"</span> &gt;= 2'],
+            ['c-out', '-- 47 feições'],
+            ['', ''],
+            ['c-com', '-- Regra 2: todo o resto, em cinza'],
+            ['', '<span class="c-kw">ELSE</span>'],
+            ['c-out', '-- 355 feições']
+        ], 12000);
+        (function () {
+            const W = 360, H = 320, COLS = 23, S = 12, G = 3;
+            const svg = d3.select('#waffle-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const rand = rng(3);
+            const ids = d3.shuffler(rand)(d3.range(402)).slice(0, 47);
+            const lit = new Set(ids);
+            const x0 = (W - COLS * (S + G)) / 2;
+            const cells = svg.selectAll('rect').data(d3.range(402)).join('rect')
+                .attr('x', i => x0 + (i % COLS) * (S + G)).attr('y', i => 20 + Math.floor(i / COLS) * (S + G))
+                .attr('width', S).attr('height', S).attr('rx', 2);
+            const cnt = svg.append('text').attr('x', W / 2).attr('y', H - 12).attr('text-anchor', 'middle')
+                .attr('font-size', 22).attr('font-weight', 800).attr('fill', PRIMARY);
+            function run() {
+                cells.interrupt().attr('fill', GHOST);
+                cnt.text('402 acidentes');
+                cells.filter(i => lit.has(i)).transition().delay((i) => 1400 + ids.indexOf(i) * 45).duration(250).attr('fill', ERROR);
+                cnt.transition().delay(1400).duration(47 * 45).tween('t', () => t => cnt.text(`${Math.round(47 * t)} de 402 acendem`));
+            }
+            onVisible(document.getElementById('waffle-stage'), () => { run(); d3.interval(run, 8000); });
+        })();
+
+        // ===== SLIDE 10: rótulo de ponto, de linha e de polígono (loop) =====
+        (function () {
+            const W = 960, H = 420;
+            const svg = d3.select('#pos-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const titulo = (x, t) => svg.append('text').attr('x', x).attr('y', 36).attr('text-anchor', 'middle').attr('fill', SOFTER).attr('font-size', 16).attr('font-weight', 700).text(t);
+            titulo(160, 'PONTO'); titulo(480, 'LINHA'); titulo(800, 'POLÍGONO');
+            [320, 640].forEach(x => svg.append('line').attr('x1', x).attr('x2', x).attr('y1', 60).attr('y2', H - 30).attr('stroke', BORDER));
+            // ponto: rótulo testa posições ao redor e para no canto superior direito
+            const pc = [160, 230];
+            svg.append('circle').attr('cx', pc[0]).attr('cy', pc[1]).attr('r', 10).attr('fill', PRIMARY).attr('stroke', BG).attr('stroke-width', 2);
+            const pl = svg.append('text').attr('font-size', 22).attr('font-weight', 700).attr('fill', TEXT).text('Escola');
+            const POS = d3.range(8).map(k => { const a = -Math.PI / 4 + k * Math.PI / 4; return [pc[0] + Math.cos(a) * 58, pc[1] + Math.sin(a) * 42 + 7]; });
+            // linha: estrada curva com rótulo seguindo o traçado
+            const estrada = 'M 360 330 C 420 120, 540 360, 610 150';
+            svg.append('path').attr('id', 'pos-estrada').attr('d', estrada).attr('fill', 'none').attr('stroke', ACCENT).attr('stroke-width', 6).attr('stroke-linecap', 'round');
+            const lt = svg.append('text').attr('font-size', 20).attr('font-weight', 700).attr('fill', TEXT).attr('dy', -12);
+            const tp = lt.append('textPath').attr('href', '#pos-estrada').text('OT-322');
+            // polígono: bairro com rótulo que desce até o centro
+            svg.append('path').attr('d', 'M 690 120 L 900 100 L 930 280 L 820 360 L 680 310 Z')
+                .attr('fill', PRIMARY).attr('fill-opacity', 0.15).attr('stroke', PRIMARY).attr('stroke-width', 2);
+            const gl = svg.append('text').attr('x', 805).attr('text-anchor', 'middle').attr('font-size', 24).attr('font-weight', 800).attr('fill', TEXT).text('Centro');
+            function run() {
+                pl.interrupt().attr('x', POS[0][0]).attr('y', POS[0][1]).attr('text-anchor', 'middle');
+                let k = 0;
+                const step = d3.interval(() => {
+                    k++; const p = POS[k % 8];
+                    pl.transition().duration(220).attr('x', p[0]).attr('y', p[1]);
+                    if (k >= 9) { step.stop(); pl.transition().duration(300).attr('x', pc[0] + 48).attr('y', pc[1] - 18).attr('text-anchor', 'start').attr('fill', PRIMARY); }
+                }, 300);
+                pl.attr('fill', TEXT);
+                tp.interrupt().attr('startOffset', '0%')
+                    .transition().delay(400).duration(2600).ease(d3.easeCubicInOut).attr('startOffset', '38%');
+                gl.interrupt().attr('y', 70).attr('opacity', 0)
+                    .transition().delay(800).duration(1400).ease(d3.easeBounceOut).attr('y', 240).attr('opacity', 1);
+            }
+            window.__posReplay = run;
+            onVisible(document.getElementById('pos-stage'), () => { run(); d3.interval(run, 7000); });
+        })();
+
+        // ===== SLIDE 11a: texto sobre ortofoto, com e sem halo (loop) =====
+        (function () {
+            const W = 420, H = 180;
+            const svg = d3.select('#halo-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const rand = rng(11);
+            const TONS = [CROP, ACCENT, SOFTER, PRIMARY, TEXT];
+            d3.range(160).forEach(() => {
+                svg.append('rect').attr('x', rand() * W).attr('y', rand() * H).attr('width', 12 + rand() * 50).attr('height', 8 + rand() * 30)
+                    .attr('fill', TONS[Math.floor(rand() * TONS.length)]).attr('opacity', 0.25 + rand() * 0.35);
+            });
+            const rot = svg.append('text').attr('x', W / 2).attr('y', H / 2 + 12).attr('text-anchor', 'middle')
+                .attr('font-size', 34).attr('font-weight', 800).attr('fill', ACCENT).attr('stroke', BG)
+                .attr('stroke-linejoin', 'round').style('paint-order', 'stroke').text('Jardim Gisela');
+            const tag = svg.append('text').attr('x', 12).attr('y', 24).attr('font-size', 14).attr('font-weight', 700);
+            function run() {
+                rot.interrupt().attr('stroke-width', 0); tag.text('sem halo').attr('fill', ERROR);
+                rot.transition().delay(2200).duration(500).attr('stroke-width', 7)
+                    .on('end', () => tag.text('com halo').attr('fill', PRIMARY));
+            }
+            onVisible(document.getElementById('halo-stage'), () => { run(); d3.interval(run, 5500); });
+        })();
+
+        // ===== SLIDE 11b: dois rótulos colidem; o de menor prioridade some (loop) =====
+        (function () {
+            const W = 420, H = 180;
+            const svg = d3.select('#prio-stage').append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+            const mk = (txt, p, cor) => {
+                const g = svg.append('g');
+                g.append('text').attr('text-anchor', 'middle').attr('font-size', 26).attr('font-weight', 800).attr('fill', cor).text(txt);
+                g.append('text').attr('text-anchor', 'middle').attr('y', 26).attr('font-size', 13).attr('fill', SOFTER).text('prioridade ' + p);
+                return g;
+            };
+            const a = mk('Centro', 8, PRIMARY), b = mk('Vila Operária', 3, TEXT);
+            const boom = svg.append('circle').attr('cx', W / 2).attr('cy', 80).attr('r', 0).attr('fill', 'none').attr('stroke', ERROR).attr('stroke-width', 3);
+            function run() {
+                a.interrupt().attr('opacity', 1).attr('transform', 'translate(90,70)');
+                b.interrupt().attr('opacity', 1).attr('transform', 'translate(330,110)');
+                boom.interrupt().attr('r', 0).attr('opacity', 1);
+                a.transition().delay(800).duration(1200).ease(d3.easeCubicInOut).attr('transform', 'translate(175,80)');
+                b.transition().delay(800).duration(1200).ease(d3.easeCubicInOut).attr('transform', 'translate(250,95)')
+                    .on('end', () => {
+                        boom.transition().duration(400).attr('r', 70).attr('opacity', 0);
+                        b.transition().delay(300).duration(500).attr('opacity', 0.08);
+                        a.transition().delay(300).duration(500).attr('transform', 'translate(210,85)');
+                    });
+            }
+            onVisible(document.getElementById('prio-stage'), () => { run(); d3.interval(run, 5500); });
+        })();
+
+        // ===== SLIDE 13: expressões digitadas com o resultado (loop) =====
+        typeCode('code-expr', [
+            ['c-com', '-- Estradas rurais: nome e tipo'],
+            ['', '<span class="c-str">"nome"</span> <span class="c-kw">||</span> <span class="c-str">\' (\'</span> <span class="c-kw">||</span> <span class="c-str">"tipo"</span> <span class="c-kw">||</span> <span class="c-str">\')\'</span>'],
+            ['c-out', '-- OT-322 (RODOVIA MUNICIPAL)'],
+            ['', ''],
+            ['c-com', '-- Bairros: nome e população com ponto de milhar'],
+            ['', '<span class="c-kw">concat</span>(<span class="c-str">"nome"</span>, <span class="c-str">\'\\n\'</span>, <span class="c-kw">format_number</span>(<span class="c-str">"populacao"</span>, 0))'],
+            ['c-out', '-- Vila Pioneiro'],
+            ['c-out', '-- 18.782'],
+            ['', ''],
+            ['c-com', '-- Com || e população vazia, o rótulo inteiro some (bairro Sadia)']
+        ], 14000);
+
+        // === CONTROLES DE SLIDE: navegação card-a-card (progresso + botão + teclado) ===
+        (function () {
+            const cardSections = Array.from(document.querySelectorAll('body > section'));
+            if (cardSections.length === 0) return;
+
+            const progress = document.getElementById('mira-progress');
+            const nextBtn = document.getElementById('mira-next');
+            const nextIcon = document.getElementById('mira-next-icon');
+
+            const atBottom = () =>
+                (window.scrollY + window.innerHeight) >= (document.documentElement.scrollHeight - 100);
+
+            function currentIndex() {
+                const y = window.scrollY + window.innerHeight * 0.3;
+                let idx = -1;
+                for (let i = 0; i < cardSections.length; i++) {
+                    if (cardSections[i].offsetTop <= y) idx = i;
+                }
+                return idx;
+            }
+
+            function goTo(i) {
+                const idx = Math.max(0, Math.min(cardSections.length - 1, i));
+                cardSections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            window.addEventListener('scroll', () => {
+                const docH = document.documentElement.scrollHeight - window.innerHeight;
+                progress.style.width = (docH > 0 ? (window.scrollY / docH) * 100 : 0) + '%';
+                nextBtn.classList.toggle('visible', window.scrollY > 300);
+                nextIcon.setAttribute('data-lucide', atBottom() ? 'chevron-up' : 'chevron-down');
+                lucide.createIcons();
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (atBottom()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+                goTo(currentIndex() + 1);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key)) {
+                    e.preventDefault();
+                    goTo(currentIndex() + 1);
+                } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+                    e.preventDefault();
+                    const idx = currentIndex();
+                    if (idx <= 0) window.scrollTo({ top: 0, behavior: 'smooth' });
+                    else goTo(idx - 1);
+                } else if (e.key === 'Home') {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (e.key === 'End') {
+                    e.preventDefault();
+                    goTo(cardSections.length - 1);
+                } else if (e.key.toLowerCase() === 'f') {
+                    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                    else document.exitFullscreen();
+                }
+            });
+        })();
+    </script>
+
+    <!-- Modo edição (reordenar slides): tecla E ou ?edit=1 -->
+    <script src="mira/mira-edit.js" defer></script>
+    <!-- Edição livre estilo Canva (mover/redimensionar/rotacionar/duplicar/excluir/texto): tecla E -->
+    <script src="mira/mira-edit-free.js" defer></script>
+    <!-- mira-draw (desenhar sobre o slide): tecla P ou ?draw=1 -->
+    <script src="mira/mira-draw.js" defer></script>
+</body>
+
+</html>
