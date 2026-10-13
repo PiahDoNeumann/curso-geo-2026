@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Aula 6: Regra de conjuntos</title>
+
+<!-- ==========================================================
+     MIRA-DEFAULT · template oficial padrão do Mira
+     ----------------------------------------------------------
+     Um slide = um título em cima e uma animação ocupando todo o
+     resto do quadro 16:9. Sem card, sem pílulas, sem moldura: a
+     animação É o slide.
+
+     Veio do mira-studio-full, mas SÓ a parte de animação. Ficaram
+     de fora, de propósito, as coisas que existem para gravar:
+       - regra dos terços (animação 2/3 + câmera 1/3)
+       - layout de câmera cheia
+       - teleprompter e gravador
+     Slide comum não tem câmera. Quem precisa gravar usa
+     /mira-studio-full (16:9) ou /mira-studio (9:16), que seguem
+     existindo com essas peças.
+
+     ESTRUTURA DE UM SLIDE DE CONTEÚDO (é o contrato; os agentes
+     de animação procuram .anim-stage):
+
+       <section>
+         <div class="slide-main">
+           <h2>Título <span class="accent">destacado</span></h2>
+           <div class="anim-stage"><svg id="..."></svg></div>
+         </div>
+       </section>
+
+     O PALCO OCUPA O QUADRO INTEIRO, de borda a borda: o .anim-stage
+     é absoluto e cobre a <section> toda, por baixo do título. Não é
+     mais "o que sobra depois do título".
+
+     O TÍTULO FICA POR CIMA de tudo que é do template. A faixa de
+     z-index deste arquivo vai até 10; os módulos de autoria
+     (mira-draw, mira-edit) usam 99998 e acima, e continuam acima do
+     título de propósito, senão não daria para desenhar nem editar
+     por cima dele.
+
+     A ANIMAÇÃO EVITA A FAIXA DO TÍTULO. O palco() mede o título e
+     entrega a faixa livre em unidades do viewBox:
+
+       F.topo         y onde a área livre começa (abaixo do título)
+       F.alturaUtil   altura dessa área
+       F.vy(k)        mapeia 0..1 na faixa livre. Use no lugar de F.H * k
+
+     Regra: nada FOCAL acima de F.topo. Ambiente pode atravessar,
+     porque atrás do título ele lê como profundidade, não como
+     conflito. Os 50px de padding continuam sendo a área segura das
+     bordas.
+     ========================================================== -->
+<link href="assets/vendor/inter.css" rel="stylesheet">
+<script src="assets/vendor/d3.v7.min.js"></script>
+<style>
+/* @MIRA:THEME:START */
+/* MIRA THEME: mira-dark (padrão)
+   Identidade clássica do canal: fundo preto, laranja vibrante,
+   glassmorphism no estilo clássico do canal. */
+:root {
+    --mira-primary: #FF904D;
+    --mira-crop: #35D07F;
+    --mira-bg: #000000;
+    --mira-text: #ffffff;
+    --mira-text-soft: rgba(255, 255, 255, 0.70);
+    --mira-text-softer: rgba(255, 255, 255, 0.50);
+    --mira-card-bg: rgba(255, 255, 255, 0.05);
+    --mira-card-border: rgba(255, 255, 255, 0.10);
+    --mira-glow-soft: rgba(255, 144, 77, 0.15);
+    --mira-glow-strong: rgba(255, 144, 77, 0.25);
+    --mira-icon-bg: rgba(255, 144, 77, 0.15);
+    --mira-icon-border: rgba(255, 144, 77, 0.30);
+    --mira-pill-bg: rgba(255, 255, 255, 0.04);
+    --mira-pill-border: rgba(255, 255, 255, 0.08);
+    --mira-stage-glow: rgba(255, 144, 77, 0.06);
+    --mira-accent-2: #FFC766;
+}
+
+
+/* ============================================================
+   MIRA — base.css
+   Estrutura compartilhada por todos os temas.
+   Os temas definem apenas as CSS variables (--mira-*).
+   ============================================================ */
+
+body {
+    background: var(--mira-bg);
+    min-height: 100vh;
+    color: var(--mira-text);
+    font-family: 'Inter', sans-serif;
+}
+
+.primary-color { color: var(--mira-primary); }
+.primary-bg { background: var(--mira-primary); }
+
+.glass-card {
+    background: var(--mira-card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--mira-card-border);
+    box-shadow: 0 10px 30px var(--mira-glow-soft);
+    transition: all 0.3s ease;
+    border-radius: 0.75rem;
+}
+
+.glass-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px var(--mira-glow-strong);
+}
+
+.icon-hero {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    background: var(--mira-icon-bg);
+    border: 1px solid var(--mira-icon-border);
+}
+
+.attribute-pill {
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    transition: all 0.25s ease;
+    border-radius: 9999px;
+}
+
+.attribute-pill:hover {
+    background: var(--mira-icon-bg);
+    border-color: var(--mira-icon-border);
+    transform: translateY(-3px);
+}
+
+/* Palco de animação D3 — tamanho padrão do canvas */
+.anim-stage {
+    width: 100%;
+    height: clamp(400px, 60vh, 620px);
+    background: radial-gradient(circle at 50% 50%, var(--mira-stage-glow), transparent 70%);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.anim-stage svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.replay-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    color: var(--mira-text-soft);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.replay-btn:hover {
+    background: var(--mira-icon-bg);
+    color: var(--mira-primary);
+}
+
+.text-soft { color: var(--mira-text-soft); }
+.text-softer { color: var(--mira-text-softer); }
+
+@keyframes mira-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+@keyframes mira-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes mira-gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* @MIRA:THEME:END */
+
+/* ----------------------------------------------------------
+   A estrutura vem DEPOIS do bloco do tema de propósito: o
+   "npx mira-animator new --theme=..." troca só aquele bloco, e
+   o que está aqui embaixo precisa continuar valendo por cima do
+   que o tema trouxer.
+   ---------------------------------------------------------- */
+:root {
+    --accent: var(--mira-primary);
+    --bg: var(--mira-bg);
+    --ink: var(--mira-text);
+    --muted: var(--mira-text-soft);
+    --line: var(--mira-card-border);
+    /* quadro 16:9 que cabe inteiro na janela */
+    --fmt-w: min(100vw, calc(100vh * 16 / 9));
+    --fmt-h: calc(var(--fmt-w) * 9 / 16);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { background: #000000; scroll-behavior: smooth; scroll-snap-type: y proximity; }
+/* sem barra de rolagem: ela roubaria largura do quadro e criaria
+   scroll horizontal em tela cheia. Navegue por seta ou roda. */
+html { scrollbar-width: none; overflow-x: hidden; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+
+body {
+    background: #000000;
+    color: var(--ink);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+body > section {
+    position: relative;
+    width: var(--fmt-w);
+    height: var(--fmt-h);
+    min-height: var(--fmt-h);
+    /* centraliza o quadro: em tela que não é 16:9 a sobra vira
+       faixa cinza acima e abaixo, nunca o slide seguinte */
+    margin: calc((100vh - var(--fmt-h)) / 2) 0;
+    scroll-margin-top: calc((100vh - var(--fmt-h)) / 2);
+    overflow: hidden;
+    background: var(--bg);
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    isolation: isolate;
+}
+
+/* DIRETIVA DA CAPA: o título do primeiro slide nunca quebra
+   deixando artigo ou preposição sozinho na linha de baixo. */
+body > section:first-of-type h1,
+body > section:first-of-type h2 { text-wrap: balance; }
+
+h1 { font-size: clamp(34px, 7.4vh, 72px); line-height: 1.02; letter-spacing: -.02em; font-weight: 800; }
+h2 { font-size: clamp(28px, 4.6vh, 46px); line-height: 1.1; letter-spacing: -.01em; font-weight: 800; }
+p  { font-size: clamp(15px, 2vh, 20px); line-height: 1.5; color: var(--muted); }
+.accent { color: var(--accent); }
+
+/* ---------- capa e encerramento: texto centrado no quadro ---------- */
+.slide-centro {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 50px;
+    text-align: center;
+}
+.slide-centro .marca {
+    font-size: 12px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--mira-text-softer);
+}
+
+/* ---------- slide de conteúdo: título em cima, animação no resto ---------- */
+.slide-main {
+    width: 100%;
+    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 50px;              /* área segura */
+}
+/* o título fica POR CIMA do palco, que agora passa por baixo dele.
+   z-index 10 é o teto deste template; mira-draw e mira-edit vivem em
+   99998 e acima, e continuam por cima do título de propósito, senão
+   não daria para desenhar nem editar sobre ele. */
+.slide-main h2 {
+    flex: 0 0 auto;
+    margin-bottom: 14px;
+    text-align: center;
+    position: relative;
+    z-index: 10;
+}
+
+/* o palco: O QUADRO INTEIRO, de borda a borda.
+
+   `inset: 0` resolve contra a <section>, porque o .slide-main é
+   estático e a <section> é `position: relative`. Sair do fluxo é o
+   que faz o palco passar POR BAIXO do título em vez de começar
+   depois dele.
+
+   Os resets de fundo e raio não são enfeite. Quando o
+   "new --theme=..." injeta o base.css, ele traz `.anim-stage` com
+   altura fixa (clamp 400-620px), glow radial e cantos arredondados,
+   que é a linguagem de CARD. Aqui o palco É o slide: sem neutralizar
+   isso, o deck gerado sai com uma caixinha arredondada no meio, que
+   é exatamente o que este template existe para não ser. */
+.anim-stage {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    background: none;
+    border-radius: 0;
+}
+.anim-stage svg { width: 100%; height: 100%; display: block; }
+
+/* @MIRA:RESPONSIVE:START */
+/* ============================================================
+   MIRA — responsive.css  (camada de reflow mobile-first)
+   Objetivo: TODO slide 16:9 do Mira vira legível no celular em
+   retrato SEM arquivo mobile separado. O mesmo deck se reorganiza:
+   fontes encolhem, grids empilham, padding reduz, palcos escalam.
+
+   Estratégia: os decks nascem "desktop-first" (classes Tailwind com
+   tamanhos fixos: text-6xl, p-10, ...). Esta camada sobrescreve essas
+   classes abaixo de 640px. Usa !important de propósito — precisa
+   vencer o Tailwind CDN (injetado em runtime) em decks legados sem
+   reescrever o HTML. Os clamps têm teto ~= valor desktop, então em
+   telas largas nada muda; só encolhem no estreito.
+   ============================================================ */
+
+/* Guarda universal contra overflow horizontal (o "print cortado" no zap). */
+html, body { max-width: 100%; overflow-x: hidden; }
+img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
+
+@media (max-width: 640px) {
+
+  /* --- Tipografia fluida: encolhe títulos gigantes no celular --- */
+  .text-9xl { font-size: clamp(3rem, 12vw, 5rem)      !important; line-height: 1.05 !important; }
+  .text-8xl { font-size: clamp(2.75rem, 11vw, 4.5rem) !important; line-height: 1.06 !important; }
+  .text-7xl { font-size: clamp(2.25rem, 10vw, 3.75rem)!important; line-height: 1.08 !important; }
+  .text-6xl { font-size: clamp(2rem, 9vw, 3rem)       !important; line-height: 1.1  !important; }
+  .text-5xl { font-size: clamp(1.75rem, 8vw, 2.5rem)  !important; line-height: 1.12 !important; }
+  .text-4xl { font-size: clamp(1.5rem, 7vw, 2rem)     !important; line-height: 1.15 !important; }
+  .text-3xl { font-size: clamp(1.35rem, 6vw, 1.75rem) !important; line-height: 1.2  !important; }
+  .text-2xl { font-size: clamp(1.2rem, 5vw, 1.5rem)   !important; line-height: 1.25 !important; }
+  .text-xl  { font-size: clamp(1.05rem, 4.5vw, 1.25rem)!important; line-height: 1.3 !important; }
+
+  /* Títulos: quebram entre palavras; só partem uma palavra se ela sozinha
+     estourar a largura. Sem hyphens:auto — em PT ele hifena no meio
+     ("pode-rosas") e fica feio em título de display. */
+  h1, h2, h3 { overflow-wrap: break-word; }
+
+  /* --- Espaçamento: paddings de desktop sufocam o celular --- */
+  .p-12 { padding: 1.25rem !important; }
+  .p-10 { padding: 1.15rem !important; }
+  .p-8  { padding: 1.05rem !important; }
+  .px-12, .px-10 { padding-left: 1.15rem !important; padding-right: 1.15rem !important; }
+  .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .py-16 { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
+  .gap-8 { gap: 1rem !important; }
+  .gap-10, .gap-12 { gap: 1.25rem !important; }
+
+  /* --- Layout: seção de slide sempre alcançável pelo topo ---
+     min-h-screen + justify-center clipa o topo quando o conteúdo é
+     maior que a tela. No celular, ancora no topo e deixa rolar. */
+  .min-h-screen {
+    min-height: 100dvh !important;
+    height: auto !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+  .min-h-screen.justify-center,
+  .min-h-screen.items-center { justify-content: flex-start !important; }
+
+  /* --- Grids/flex de 2+ colunas empilham (redundante ao md: do
+         Tailwind, mas cobre grids sem breakpoint declarado). --- */
+  .grid-cols-2, .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr !important; }
+
+  /* --- Palco de animação (D3/SVG/canvas): nunca estoura a largura,
+         mantém proporção e encolhe a altura. --- */
+  .anim-stage {
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+    min-height: 0 !important;
+  }
+
+  /* --- Tabelas: fonte menor + rolagem horizontal se precisar. --- */
+  table { font-size: 0.82rem !important; }
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+  /* --- Controles flutuantes respeitam a safe-area do iPhone. --- */
+  #mira-next, #next-card {
+    bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+    right: max(1rem, env(safe-area-inset-right)) !important;
+    width: 44px !important; height: 44px !important;
+  }
+}
+/* @MIRA:RESPONSIVE:END */
+
+/* Subtítulo de cada slide: logo abaixo do título, por cima do palco */
+.slide-main p.sub {
+    flex: 0 0 auto;
+    text-align: center;
+    position: relative;
+    z-index: 10;
+    margin: -4px 0 0;
+    font-style: italic;
+    font-size: clamp(15px, 2.4vh, 24px);
+    color: var(--mira-text-soft);
+}
+</style>
+</head>
+<body>
+
+<!-- === SLIDE 1 · ABERTURA === -->
+<section>
+    <div class="slide-main">
+        <h2>Geometria também é <span class="accent">conjunto</span></h2>
+        <p class="sub">A regra por trás de toda ferramenta do mapa</p>
+        <div class="anim-stage"><svg id="st-01" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<!-- === SLIDE 2 · E (interseção) === -->
+<section>
+    <div class="slide-main">
+        <h2><span class="accent">E</span>: o que as duas têm</h2>
+        <p class="sub">Interseção (A∩B): a região comum aos dois</p>
+        <div class="anim-stage"><svg id="st-02" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<!-- === SLIDE 3 · OU (união) === -->
+<section>
+    <div class="slide-main">
+        <h2><span class="accent">OU</span>: um, outro ou ambos</h2>
+        <p class="sub">União (A∪B): junta as duas áreas em uma só</p>
+        <div class="anim-stage"><svg id="st-03" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<!-- === SLIDE 4 · MAS NÃO (diferença) === -->
+<section>
+    <div class="slide-main">
+        <h2><span class="accent">MAS NÃO</span>: tira um do outro</h2>
+        <p class="sub">Diferença (A−B): o que é de A e não é de B</p>
+        <div class="anim-stage"><svg id="st-04" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<!-- === SLIDE 5 · UM OU OUTRO (diferença simétrica) === -->
+<section>
+    <div class="slide-main">
+        <h2><span class="accent">Um ou outro</span>, nunca os dois</h2>
+        <p class="sub">Diferença simétrica (A△B): tudo, menos a parte comum</p>
+        <div class="anim-stage"><svg id="st-05" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<!-- === SLIDE 6 · POLÍGONO É NUVEM DE PONTOS === -->
+<section>
+    <div class="slide-main">
+        <h2>Polígono é <span class="accent">nuvem de pontos</span></h2>
+        <p class="sub">Cada ponto está dentro ou fora, e é assim que o computador decide</p>
+        <div class="anim-stage"><svg id="st-06" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<!-- === SLIDE 7 · QUANDO NÃO SE ENCONTRAM === -->
+<section>
+    <div class="slide-main">
+        <h2>E se <span class="accent">não se encontram</span>?</h2>
+        <p class="sub">Interseção vazia é um resultado válido, não um erro</p>
+        <div class="anim-stage"><svg id="st-07" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<!-- === SLIDE 8 · ORDEM NÃO MUDA === -->
+<section>
+    <div class="slide-main">
+        <h2>Trocar a ordem <span class="accent">não muda nada</span></h2>
+        <p class="sub">A∩B = B∩A, e A∪B = B∪A</p>
+        <div class="anim-stage"><svg id="st-08" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<!-- === SLIDE 9 · ORDEM MUDA NA DIFERENÇA === -->
+<section>
+    <div class="slide-main">
+        <h2>Na diferença, a ordem <span class="accent">muda tudo</span></h2>
+        <p class="sub">A−B e B−A são resultados diferentes</p>
+        <div class="anim-stage"><svg id="st-09" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<!-- === SLIDE 10 · DICIONÁRIO === -->
+<section>
+    <div class="slide-main">
+        <h2>Do português para a <span class="accent">operação</span></h2>
+        <p class="sub">Quatro palavras que decidem qual ferramenta usar</p>
+        <div class="anim-stage"><svg id="st-10" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<!-- === SLIDE 11 · EXERCÍCIO 1 === -->
+<section>
+    <div class="slide-main">
+        <h2>Em A <span class="accent">e</span> em B</h2>
+        <p class="sub">Pense, escolha, e a resposta aparece</p>
+        <div class="anim-stage"><svg id="st-11" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<!-- === SLIDE 12 · EXERCÍCIO 2 === -->
+<section>
+    <div class="slide-main">
+        <h2>Em A <span class="accent">mas não</span> em B</h2>
+        <p class="sub">Duas formas, uma resposta só</p>
+        <div class="anim-stage"><svg id="st-12" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<!-- === SLIDE 13 · EXERCÍCIO 3 === -->
+<section>
+    <div class="slide-main">
+        <h2>Em B <span class="accent">mas não</span> em A</h2>
+        <p class="sub">Mesmas formas, ordem trocada: o resultado muda</p>
+        <div class="anim-stage"><svg id="st-13" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<!-- === SLIDE 14 · ENCERRAMENTO === -->
+<section>
+    <div class="slide-main">
+        <h2>Obrigado</h2>
+        <p class="sub">Pense em conjuntos antes de abrir a ferramenta</p>
+        <div class="anim-stage"><svg id="st-14" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+</section>
+
+<script>
+/* ==============================================================
+   Aula 6: regra de conjuntos aplicada a geometrias.
+
+   Todos os slides usam o MESMO diagrama de Venn literal (A em laranja
+   da marca, B em branco), o que muda é a operação mostrada. O motor
+   criarVenn() monta as regiões com clipPath e mask, então interseção,
+   diferença e união são desenhadas de verdade, não simuladas.
+
+   Cada animação declara o quadro como função de `ms`, e o regente
+   decide QUE `ms` passar: slide fora da tela fica congelado no zero,
+   ao entrar recomeça a história do início.
+   ============================================================== */
+(function () {
+    'use strict';
+
+    function cor(nome, reserva) {
+        var v = getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+        return v || reserva;
+    }
+    var COR = {
+        marca: cor('--mira-primary', '#FF904D'),
+        acento: cor('--mira-accent-2', '#FFC766'),
+        tinta: cor('--mira-text', '#ffffff'),
+        fundo: cor('--mira-bg', '#000000')
+    };
+
+    /* ---------- regente ---------- */
+    function reger(svgId, quadro) {
+        var svg = document.getElementById(svgId);
+        var slide = svg && svg.closest('section');
+        if (!slide || typeof IntersectionObserver !== 'function') {
+            d3.timer(function (ms) { quadro(ms); });
+            return;
+        }
+        var relogio = null, visivel = false, ultimoZero = false;
+        d3.timer(function (ms) {
+            if (!visivel) {
+                /* fora da tela: desenha o quadro zero UMA vez e para de gastar */
+                if (!ultimoZero) { quadro(0); ultimoZero = true; }
+                return;
+            }
+            ultimoZero = false;
+            if (relogio === null) relogio = ms;
+            quadro(ms - relogio);
+        });
+        new IntersectionObserver(function (entradas) {
+            entradas.forEach(function (e) {
+                if (e.isIntersecting === visivel) return;
+                visivel = e.isIntersecting;
+                relogio = null;
+                ultimoZero = false;
+            });
+        }, { threshold: 0.6 }).observe(slide);
+    }
+
+    /* ---------- palco: o quadro inteiro, menos a faixa do título ---------- */
+    function palco(svgId) {
+        var svg = d3.select('#' + svgId);
+        if (svg.empty()) return null;
+        var caixa = svg.node().closest('.anim-stage');
+        var secao = caixa && caixa.closest ? caixa.closest('section') : null;
+        var titulo = secao && secao.querySelector
+            ? secao.querySelector('.slide-main h2, .slide-main h1')
+            : null;
+        var sub = secao && secao.querySelector ? secao.querySelector('.slide-main p.sub') : null;
+        var RESPIRO = 18;
+        var F = { W: 960, H: 460, topo: 0, alturaUtil: 460 };
+        F.vy = function (k) { return F.topo + F.alturaUtil * k; };
+
+        function casar() {
+            var r = caixa.getBoundingClientRect();
+            if (r.width > 0 && r.height > 0) F.H = Math.round(F.W * r.height / r.width);
+            svg.attr('viewBox', '0 0 ' + F.W + ' ' + F.H);
+            F.topo = 0;
+            if (titulo && titulo.getBoundingClientRect && r.height > 0) {
+                var t = titulo.getBoundingClientRect();
+                var basePx = Math.max(0, (t.bottom || 0) - (r.top || 0));
+                if (sub) {
+                    var s2 = sub.getBoundingClientRect();
+                    basePx = Math.max(basePx, (s2.bottom || 0) - (r.top || 0));
+                }
+                F.topo = Math.round(F.H * basePx / r.height) + RESPIRO;
+                F.topo = Math.min(F.topo, Math.round(F.H * 0.40));
+            }
+            F.alturaUtil = F.H - F.topo;
+        }
+        casar();
+        window.addEventListener('resize', casar);
+        window.addEventListener('load', casar);
+        svg.selectAll('*').remove();
+        return { svg: svg, F: F };
+    }
+
+    /* ---------- utilidades ---------- */
+    function seg(t, a, b) { return t <= a ? 0 : t >= b ? 1 : (t - a) / (b - a); }
+    var eio = d3.easeSinInOut;
+    function mix(a, b, k) { return a + (b - a) * k; }
+    function texto(pai, tam, peso, fill) {
+        return pai.append('text').attr('text-anchor', 'middle')
+            .attr('font-size', tam).attr('font-weight', peso).attr('fill', fill)
+            .attr('font-family', 'Inter, sans-serif');
+    }
+    function geo(F, kR, ky) {
+        return { cx: F.W / 2, cy: F.vy(ky), R: Math.min(F.alturaUtil * kR, F.W * .16) };
+    }
+
+    /* ---------- motor do diagrama de Venn ----------
+       Dois discos, A e B. Regiões por recorte:
+         A só     = disco A com máscara que apaga B
+         B só     = disco B com máscara que apaga A
+         A∩B      = disco B recortado pelo disco A
+       O contorno de cada disco é dividido em parte de fora e parte de
+       dentro do outro, para a união poder apagar a linha interna. */
+    function criarVenn(svg, pai, uid) {
+        var defs = svg.select('defs');
+        if (defs.empty()) defs = svg.insert('defs', ':first-child');
+        var INF = 4000;
+        function mascara(id) {
+            var m = defs.append('mask').attr('id', id).attr('maskUnits', 'userSpaceOnUse')
+                .attr('x', -INF).attr('y', -INF).attr('width', 3 * INF).attr('height', 3 * INF);
+            m.append('rect').attr('x', -INF).attr('y', -INF).attr('width', 3 * INF)
+                .attr('height', 3 * INF).attr('fill', '#fff');
+            return m.append('circle').attr('fill', '#000');
+        }
+        function recorte(id) { return defs.append('clipPath').attr('id', id).append('circle'); }
+        var cA = recorte(uid + '-cA'), cB = recorte(uid + '-cB');
+        var mB = mascara(uid + '-nB'), mA = mascara(uid + '-nA');
+        var g = pai.append('g');
+        var baseA = g.append('circle').attr('fill', COR.marca);
+        var baseB = g.append('circle').attr('fill', COR.tinta);
+        var fA = g.append('circle').attr('fill', COR.marca).attr('mask', 'url(#' + uid + '-nB)');
+        var fB = g.append('circle').attr('fill', COR.marca).attr('mask', 'url(#' + uid + '-nA)');
+        var fL = g.append('circle').attr('fill', COR.marca).attr('clip-path', 'url(#' + uid + '-cA)');
+        /* união: dois discos cheios dentro de um grupo, a opacidade é do grupo,
+           então não aparece emenda nem a lente fica mais clara que o resto */
+        var gU = g.append('g');
+        var uA = gU.append('circle').attr('fill', COR.marca);
+        var uB = gU.append('circle').attr('fill', COR.marca);
+        function contorno(stroke) {
+            return g.append('circle').attr('fill', 'none').attr('stroke', stroke)
+                .attr('stroke-width', 5).attr('stroke-linejoin', 'round');
+        }
+        var oAfora = contorno(COR.marca).attr('mask', 'url(#' + uid + '-nB)');
+        var oAdentro = contorno(COR.marca).attr('clip-path', 'url(#' + uid + '-cB)');
+        var oBfora = contorno(COR.tinta).attr('mask', 'url(#' + uid + '-nA)');
+        var oBdentro = contorno(COR.tinta).attr('clip-path', 'url(#' + uid + '-cA)');
+        var tA = texto(g, 20, 800, COR.marca).text('A');
+        var tB = texto(g, 20, 800, COR.tinta).text('B');
+
+        function atualizar(s) {
+            var rot = s.rot || 0, sw = s.swap || 0, R = s.R;
+            var c = Math.cos(Math.PI * sw), sn = Math.sin(Math.PI * sw);
+            var ax = Math.cos(rot), ay = Math.sin(rot), px = -ay, py = ax;
+            var along = s.d / 2 * c, perp = R * .35 * sn;
+            var xa = s.cx - along * ax - perp * px, ya = s.cy - along * ay - perp * py;
+            var xb = s.cx + along * ax + perp * px, yb = s.cy + along * ay + perp * py;
+            function pos(el, x, y) { el.attr('cx', x).attr('cy', y).attr('r', R); }
+            [cA, mA, baseA, fA, uA, oAfora, oAdentro].forEach(function (e) { pos(e, xa, ya); });
+            [cB, mB, baseB, fB, fL, uB, oBfora, oBdentro].forEach(function (e) { pos(e, xb, yb); });
+
+            var op = s.op == null ? 1 : s.op, hl = s.hl || {};
+            var inner = s.inner == null ? 1 : s.inner;
+            baseA.attr('opacity', .10 * op * (1 - (hl.u || 0)));
+            baseB.attr('opacity', .08 * op * (1 - (hl.u || 0)));
+            fA.attr('opacity', (hl.a || 0) * .85 * op);
+            fB.attr('opacity', (hl.b || 0) * .85 * op);
+            fL.attr('opacity', (hl.l || 0) * .85 * op);
+            gU.attr('opacity', (hl.u || 0) * .85 * op);
+            oAfora.attr('opacity', op);
+            oAdentro.attr('opacity', op * inner);
+            oBfora.attr('opacity', .85 * op);
+            oBdentro.attr('opacity', .85 * op * inner);
+
+            var sgn = c >= 0 ? -1 : 1, off = R * .5, fs = R * .5;
+            /* a letra A some sobre o laranja: escurece quando a região dela acende */
+            tA.attr('fill', d3.interpolateRgb(COR.marca, COR.fundo)(Math.min(1, (hl.a || 0) + (hl.u || 0))));
+            tA.attr('x', xa + sgn * off * ax).attr('y', ya + sgn * off * ay + fs * .35)
+                .attr('font-size', fs).attr('opacity', op);
+            tB.attr('x', xb - sgn * off * ax).attr('y', yb - sgn * off * ay + fs * .35)
+                .attr('font-size', fs).attr('opacity', op);
+        }
+        return { g: g, atualizar: atualizar };
+    }
+
+    /* ---------- 1 e 14: A e B respiram, aproximam e afastam ---------- */
+    function animDeriva(svgId, orbita) {
+        var p = palco(svgId); if (!p) return;
+        var svg = p.svg, F = p.F, CICLO = orbita ? 20000 : 14000;
+        var v = criarVenn(svg, svg.append('g'), svgId);
+        reger(svgId, function (ms) {
+            var G = geo(F, orbita ? .22 : .32, .52), t = (ms % CICLO) / CICLO;
+            var k = .5 - .5 * Math.cos(2 * Math.PI * t);
+            var d = G.R * (orbita ? mix(1.9, 1.15, k) : mix(2.9, 1.0, k));
+            v.atualizar({
+                cx: G.cx, cy: G.cy, R: G.R, d: d,
+                rot: orbita ? ms / 1000 * .11 : 0,
+                hl: { l: seg(k, .35, .9) * .55 },
+                op: Math.min(1, ms / 800)
+            });
+        });
+    }
+
+    /* ---------- 2 a 5: uma operação, do encontro ao resultado ---------- */
+    function animOp(svgId, cfg) {
+        var p = palco(svgId); if (!p) return;
+        var svg = p.svg, F = p.F, CICLO = 12000;
+        var raiz = svg.append('g');
+        var v = criarVenn(svg, raiz, svgId);
+        var rot = texto(raiz, 46, 800, COR.tinta).text(cfg.formula);
+        var leg = texto(raiz, 22, 500, COR.tinta).attr('font-style', 'italic').text(cfg.legenda);
+        reger(svgId, function (ms) {
+            var G = geo(F, .27, .42), t = (ms % CICLO) / CICLO, op = Math.min(1, ms / 800);
+            var aprox = eio(seg(t, .08, .32)) - eio(seg(t, .92, 1));
+            var h = eio(seg(t, .40, .52)) - eio(seg(t, .86, .92));
+            var deriva = Math.sin(ms / 1000 * 2 * Math.PI / 7) * 3;
+            v.atualizar({
+                cx: G.cx, cy: G.cy + deriva, R: G.R, d: G.R * mix(2.7, 1.1, aprox),
+                hl: { a: cfg.a * h, b: cfg.b * h, l: cfg.l * h, u: (cfg.u || 0) * h },
+                inner: 1 - cfg.apaga * h, op: op
+            });
+            rot.attr('x', G.cx).attr('y', G.cy + G.R + 58).attr('opacity', h * op);
+            leg.attr('x', G.cx).attr('y', G.cy + G.R + 92).attr('opacity', h * .75 * op);
+        });
+    }
+
+    /* ---------- 6: o polígono é um conjunto de pontos ---------- */
+    function animPontos(svgId) {
+        var p = palco(svgId); if (!p) return;
+        var svg = p.svg, F = p.F, CICLO = 13000;
+        var raiz = svg.append('g');
+        var poly = [[-1, -.35], [-.55, -.85], [.1, -.62], [.7, -.9], [1.05, -.15], [.62, .55], [.05, .88], [-.6, .62]];
+        var forma = raiz.append('path').attr('fill', COR.marca).attr('stroke', COR.marca)
+            .attr('stroke-width', 5).attr('stroke-linejoin', 'round')
+            .attr('pathLength', 1).attr('stroke-dasharray', '1 1');
+        var seed = 20261012;
+        function rnd() { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }
+        var COLS = 34, LINS = 15, pts = [];
+        for (var i = 0; i < COLS; i++) {
+            for (var j = 0; j < LINS; j++) {
+                var x = -1.9 + 3.8 * (i + .5 + (rnd() - .5) * .8) / COLS;
+                var y = -1.05 + 2.1 * (j + .5 + (rnd() - .5) * .8) / LINS;
+                pts.push({ x: x, y: y, dentro: d3.polygonContains(poly, [x, y]), u: rnd() * .16,
+                    el: raiz.append('circle') });
+            }
+        }
+        var varre = raiz.append('line').attr('stroke', COR.tinta).attr('stroke-width', 2);
+        var cont = raiz.append('text').attr('text-anchor', 'middle').attr('font-size', 26)
+            .attr('font-weight', 600).attr('font-family', 'Inter, sans-serif');
+        var tDentro = cont.append('tspan').attr('fill', COR.marca);
+        var tFora = cont.append('tspan').attr('fill', COR.tinta).attr('fill-opacity', .6);
+
+        reger(svgId, function (ms) {
+            var t = (ms % CICLO) / CICLO, op = Math.min(1, ms / 800);
+            var s = Math.min(F.W * .2, F.alturaUtil * .36), cx = F.W / 2, cy = F.vy(.44);
+            var fim = 1 - eio(seg(t, .92, 1));
+            forma.attr('d', 'M' + poly.map(function (q) { return (cx + q[0] * s) + ',' + (cy + q[1] * s); }).join('L') + 'Z')
+                .attr('stroke-dashoffset', 1 - eio(seg(t, .02, .14)))
+                .attr('fill-opacity', .08 * seg(t, .08, .16)).attr('opacity', op * fim);
+            var sx = mix(-2, 2, seg(t, .36, .66)), varrendo = seg(t, .36, .37) > 0;
+            var nIn = 0, nOut = 0;
+            pts.forEach(function (q) {
+                var ap = eio(seg(t, .10 + q.u, .17 + q.u));
+                var testado = varrendo && q.x <= sx, pop = testado ? Math.max(0, 1 - (sx - q.x) / .3) : 0;
+                var r = 4.2 * ap, fill = COR.tinta, o = .55;
+                if (testado) {
+                    if (q.dentro) { fill = COR.marca; o = 1; r *= 1 + .6 * pop; nIn++; }
+                    else { o = .18; nOut++; }
+                }
+                q.el.attr('cx', cx + q.x * s).attr('cy', cy + q.y * s).attr('r', r)
+                    .attr('fill', fill).attr('opacity', o * fim * op);
+            });
+            var vOp = seg(t, .34, .37) - seg(t, .65, .68);
+            varre.attr('x1', cx + sx * s).attr('x2', cx + sx * s)
+                .attr('y1', cy - 1.12 * s).attr('y2', cy + 1.12 * s).attr('stroke-opacity', .6 * vOp);
+            tDentro.text('dentro: ' + nIn);
+            tFora.text('     fora: ' + nOut);
+            cont.attr('x', cx).attr('y', F.vy(.95)).attr('opacity', (seg(t, .30, .36)) * fim * op);
+        });
+    }
+
+    /* ---------- 7: formas que não se encontram, e o complemento ---------- */
+    function animVazio(svgId) {
+        var p = palco(svgId); if (!p) return;
+        var svg = p.svg, F = p.F, CICLO = 14000;
+        var defs = svg.append('defs');
+        var raiz = svg.append('g');
+        var quadro = raiz.append('rect').attr('rx', 18).attr('fill', 'none').attr('stroke', COR.tinta)
+            .attr('stroke-width', 2.5).attr('stroke-dasharray', '10 8');
+        var mc = defs.append('mask').attr('id', svgId + '-mc').attr('maskUnits', 'userSpaceOnUse')
+            .attr('x', -4000).attr('y', -4000).attr('width', 12000).attr('height', 12000);
+        mc.append('rect').attr('x', -4000).attr('y', -4000).attr('width', 12000).attr('height', 12000).attr('fill', '#fff');
+        var buraco = mc.append('circle').attr('fill', '#000');
+        var comp = raiz.append('rect').attr('rx', 18).attr('fill', COR.marca)
+            .attr('mask', 'url(#' + svgId + '-mc)');
+        var v = criarVenn(svg, raiz, svgId);
+        var anel = raiz.append('circle').attr('fill', 'none').attr('stroke', COR.tinta).attr('stroke-width', 3);
+        var lab1 = texto(raiz, 46, 800, COR.tinta).text('A ∩ B = ∅');
+        var leg1 = texto(raiz, 22, 500, COR.tinta).attr('font-style', 'italic')
+            .text('nenhum ponto em comum: resultado vazio, e tudo bem');
+        var lab2 = texto(raiz, 46, 800, COR.marca);
+        lab2.append('tspan').text('A');
+        lab2.append('tspan').text('c').attr('font-size', 26).attr('dy', -18);
+        var leg2 = texto(raiz, 22, 500, COR.tinta).attr('font-style', 'italic')
+            .text('complemento de A: tudo o que está fora de A');
+
+        reger(svgId, function (ms) {
+            var t = (ms % CICLO) / CICLO, op = Math.min(1, ms / 800);
+            var fx = F.W * .05, fw = F.W * .90, fy = F.topo + F.alturaUtil * .03, fh = F.alturaUtil * .94;
+            var cx = F.W / 2, cy = fy + fh * .38, R = Math.min(fh * .22, F.W * .12);
+            var k1 = eio(seg(t, .08, .30)) - eio(seg(t, .50, .60));
+            var d = R * mix(2.9, 2.0, k1);
+            var fq = (seg(t, .64, .70) - seg(t, .92, .97)) * op;
+            var cOp = eio(seg(t, .70, .80)) - eio(seg(t, .90, .96));
+            quadro.attr('x', fx).attr('y', fy).attr('width', fw).attr('height', fh).attr('stroke-opacity', .28 * fq);
+            comp.attr('x', fx).attr('y', fy).attr('width', fw).attr('height', fh)
+                .attr('fill-opacity', .30 * cOp * op);
+            buraco.attr('cx', cx - d / 2).attr('cy', cy).attr('r', R);
+            v.atualizar({ cx: cx, cy: cy, R: R, d: d, op: op });
+            var pul = seg(t, .28, .40);
+            anel.attr('cx', cx).attr('cy', cy).attr('r', 8 + 46 * pul)
+                .attr('stroke-opacity', pul > 0 && pul < 1 ? (1 - pul) * .9 : 0);
+            var o1 = (seg(t, .30, .38) - seg(t, .50, .56)) * op;
+            var o2 = (seg(t, .74, .82) - seg(t, .90, .95)) * op;
+            lab1.attr('x', cx).attr('y', cy + R + 56).attr('opacity', o1);
+            leg1.attr('x', cx).attr('y', cy + R + 90).attr('opacity', o1 * .75);
+            lab2.attr('x', cx).attr('y', cy + R + 56).attr('opacity', o2);
+            leg2.attr('x', cx).attr('y', cy + R + 90).attr('opacity', o2 * .75);
+        });
+    }
+
+    /* ---------- 8: a ordem não muda (interseção e união) ---------- */
+    function rotuloIgual(pai, a, b) {
+        var tx = pai.append('text').attr('text-anchor', 'middle').attr('font-size', 38)
+            .attr('font-weight', 800).attr('font-family', 'Inter, sans-serif').attr('fill', COR.tinta);
+        var ta = tx.append('tspan').text(a);
+        tx.append('tspan').text('  =  ').attr('fill-opacity', .6);
+        var tb = tx.append('tspan').text(b);
+        return { tx: tx, a: ta, b: tb };
+    }
+    function animComut(svgId) {
+        var p = palco(svgId); if (!p) return;
+        var svg = p.svg, F = p.F, CICLO = 12000;
+        var raiz = svg.append('g');
+        var vL = criarVenn(svg, raiz.append('g'), svgId + '-l');
+        var vR = criarVenn(svg, raiz.append('g'), svgId + '-r');
+        var rL = rotuloIgual(raiz, 'A ∩ B', 'B ∩ A'), rR = rotuloIgual(raiz, 'A ∪ B', 'B ∪ A');
+        reger(svgId, function (ms) {
+            var t = (ms % CICLO) / CICLO, op = Math.min(1, ms / 800);
+            var R = Math.min(F.alturaUtil * .22, F.W * .115), cy = F.vy(.40);
+            var xl = F.W * .27, xr = F.W * .73;
+            var s = eio(seg(t, .10, .30)) - eio(seg(t, .55, .75));
+            vL.atualizar({ cx: xl, cy: cy, R: R, d: R * 1.1, swap: s, hl: { l: 1 }, op: op });
+            vR.atualizar({ cx: xr, cy: cy, R: R, d: R * 1.1, swap: s, hl: { u: 1 }, inner: 0, op: op });
+            [[rL, xl], [rR, xr]].forEach(function (par) {
+                par[0].tx.attr('x', par[1]).attr('y', cy + R + 64).attr('opacity', op);
+                par[0].a.attr('fill-opacity', 1 - .7 * s);
+                par[0].b.attr('fill-opacity', .3 + .7 * s);
+            });
+        });
+    }
+
+    /* ---------- 9: na diferença a ordem muda tudo ---------- */
+    function animDif(svgId) {
+        var p = palco(svgId); if (!p) return;
+        var svg = p.svg, F = p.F, CICLO = 12000;
+        var raiz = svg.append('g');
+        var vL = criarVenn(svg, raiz.append('g'), svgId + '-l');
+        var vR = criarVenn(svg, raiz.append('g'), svgId + '-r');
+        var lL = texto(raiz, 42, 800, COR.tinta).text('A − B');
+        var lR = texto(raiz, 42, 800, COR.tinta).text('B − A');
+        var neq = texto(raiz, 110, 800, COR.marca).text('≠');
+        reger(svgId, function (ms) {
+            var t = (ms % CICLO) / CICLO, op = Math.min(1, ms / 800);
+            var R = Math.min(F.alturaUtil * .22, F.W * .115), cy = F.vy(.40);
+            var xl = F.W * .27, xr = F.W * .73, fim = eio(seg(t, .90, .97));
+            var hA = eio(seg(t, .08, .22)) - fim, hB = eio(seg(t, .40, .54)) - fim;
+            var pop = eio(seg(t, .56, .66)) - fim;
+            vL.atualizar({ cx: xl, cy: cy, R: R, d: R * 1.1, hl: { a: hA }, op: op });
+            vR.atualizar({ cx: xr, cy: cy, R: R, d: R * 1.1, hl: { b: hB }, op: op });
+            lL.attr('x', xl).attr('y', cy + R + 64).attr('opacity', hA * op);
+            lR.attr('x', xr).attr('y', cy + R + 64).attr('opacity', hB * op);
+            neq.attr('x', F.W / 2).attr('y', cy + 36).attr('opacity', pop * op)
+                .attr('transform', 'translate(0,0)');
+        });
+    }
+
+    /* ---------- 10: dicionário, da palavra à operação ---------- */
+    function animDicionario(svgId) {
+        var p = palco(svgId); if (!p) return;
+        var svg = p.svg, F = p.F, CICLO = 18000;
+        var raiz = svg.append('g');
+        var cols = [
+            { palavra: 'E', formula: 'A ∩ B', frase: 'nos dois', hl: { l: 1 }, apaga: 0 },
+            { palavra: 'OU', formula: 'A ∪ B', frase: 'em um ou no outro', hl: { u: 1 }, apaga: 1 },
+            { palavra: 'MAS NÃO', formula: 'A − B', frase: 'em A, fora de B', hl: { a: 1 }, apaga: 0 },
+            { palavra: 'UM OU OUTRO', formula: 'A △ B', frase: 'em só um dos dois', hl: { a: 1, b: 1 }, apaga: 0 }
+        ].map(function (c, i) {
+            var grp = raiz.append('g');
+            c.grp = grp;
+            c.v = criarVenn(svg, grp, svgId + '-c' + i);
+            c.tp = texto(grp, 24, 800, COR.marca).text(c.palavra);
+            c.tf = texto(grp, 30, 700, COR.tinta).text(c.formula);
+            c.tr = texto(grp, 18, 500, COR.tinta).attr('font-style', 'italic').text(c.frase);
+            return c;
+        });
+        reger(svgId, function (ms) {
+            var t = (ms % CICLO) / CICLO;
+            var R = Math.min(F.alturaUtil * .15, F.W * .065), cy = F.vy(.36);
+            var fim = 1 - eio(seg(t, .95, 1));
+            cols.forEach(function (c, i) {
+                var cx = F.W * (.13 + .245 * i);
+                var e = eio(seg(t, .02 + .04 * i, .12 + .04 * i)) * fim;
+                var s0 = .20 + .15 * i;
+                var act = eio(seg(t, s0, s0 + .07)) - eio(seg(t, s0 + .12, s0 + .19));
+                var h = .45 + .55 * act;
+                var k = 1 + .08 * act;
+                c.grp.attr('opacity', e * (.7 + .3 * act))
+                    .attr('transform', 'translate(' + cx + ',' + (cy + (1 - e) * 24) + ') scale(' + k + ') translate(' + (-cx) + ',' + (-cy) + ')');
+                c.v.atualizar({
+                    cx: cx, cy: cy, R: R, d: R * 1.05,
+                    hl: { a: (c.hl.a || 0) * h, b: (c.hl.b || 0) * h, l: (c.hl.l || 0) * h, u: (c.hl.u || 0) * h },
+                    inner: 1 - c.apaga * h
+                });
+                c.tp.attr('x', cx).attr('y', cy + R + 56);
+                c.tf.attr('x', cx).attr('y', cy + R + 96);
+                c.tr.attr('x', cx).attr('y', cy + R + 128);
+            });
+        });
+    }
+
+    /* ---------- 11 a 13: exercício, pense e veja a resposta ---------- */
+    function animExercicio(svgId, certo, hl) {
+        var p = palco(svgId); if (!p) return;
+        var svg = p.svg, F = p.F, CICLO = 15000;
+        var raiz = svg.append('g');
+        var v = criarVenn(svg, raiz, svgId);
+        var itens = [['A ∩ B', 'interseção'], ['A ∪ B', 'união'], ['A − B', 'diferença'], ['B − A', 'diferença']];
+        var chips = itens.map(function (it) {
+            var g = raiz.append('g');
+            var caixa = g.append('rect').attr('rx', 14).attr('fill', COR.marca).attr('fill-opacity', 0)
+                .attr('stroke', COR.tinta).attr('stroke-width', 2.5);
+            var tf = g.append('text').attr('text-anchor', 'start').attr('font-size', 30).attr('font-weight', 800)
+                .attr('font-family', 'Inter, sans-serif').attr('fill', COR.tinta).text(it[0]);
+            var tn = g.append('text').attr('text-anchor', 'end').attr('font-size', 20).attr('font-weight', 500)
+                .attr('font-family', 'Inter, sans-serif').attr('fill', COR.tinta).attr('fill-opacity', .6).text(it[1]);
+            return { g: g, caixa: caixa, tf: tf, tn: tn };
+        });
+        var barraFundo = raiz.append('rect').attr('rx', 5).attr('height', 10).attr('fill', COR.tinta).attr('fill-opacity', .12);
+        var barra = raiz.append('rect').attr('rx', 5).attr('height', 10).attr('fill', COR.marca);
+        var pense = texto(raiz, 24, 500, COR.tinta).attr('font-style', 'italic').text('Pense…');
+        var resp = texto(raiz, 28, 800, COR.marca).text('Resposta: ' + itens[certo][0] + ' (' + itens[certo][1] + ')');
+
+        reger(svgId, function (ms) {
+            var t = (ms % CICLO) / CICLO;
+            var entrada = eio(seg(t, 0, .05)), fim = 1 - eio(seg(t, .95, 1));
+            raiz.attr('opacity', entrada * fim);
+            var R = Math.min(F.alturaUtil * .22, F.W * .12), cx = F.W * .29, cy = F.vy(.42);
+            var r = eio(seg(t, .50, .58)) - eio(seg(t, .92, .98));
+            v.atualizar({ cx: cx, cy: cy, R: R, d: R * 1.1,
+                hl: { a: (hl.a || 0) * r, b: (hl.b || 0) * r, l: (hl.l || 0) * r, u: (hl.u || 0) * r } });
+
+            var chipX = F.W * .58, chipW = F.W * .36, chipH = F.alturaUtil * .16;
+            chips.forEach(function (c, i) {
+                var y = F.vy(.12 + .22 * i);
+                var ce = eio(seg(t, .01 + .015 * i, .06 + .015 * i));
+                var ehCerto = i === certo;
+                c.g.attr('transform', 'translate(0,' + ((1 - ce) * 16) + ')')
+                    .attr('opacity', ce * (ehCerto ? 1 : 1 - .65 * r));
+                c.caixa.attr('x', chipX).attr('y', y).attr('width', chipW).attr('height', chipH)
+                    .attr('fill-opacity', ehCerto ? .28 * r : 0)
+                    .attr('stroke', ehCerto && r > .5 ? COR.marca : COR.tinta)
+                    .attr('stroke-opacity', ehCerto ? .3 + .7 * r : .3);
+                c.tf.attr('x', chipX + 26).attr('y', y + chipH / 2 + 10);
+                c.tn.attr('x', chipX + chipW - 24).attr('y', y + chipH / 2 + 7);
+            });
+
+            var by = cy + R + 78, bw = R * 2.6, bx = cx - bw / 2;
+            var pensando = (seg(t, .05, .09) - seg(t, .50, .54));
+            barraFundo.attr('x', bx).attr('y', by).attr('width', bw).attr('opacity', pensando);
+            barra.attr('x', bx).attr('y', by).attr('width', bw * (1 - seg(t, .10, .50))).attr('opacity', pensando);
+            pense.attr('x', cx).attr('y', by - 16).attr('opacity', pensando * .85);
+            resp.attr('x', cx).attr('y', by + 14).attr('opacity', r);
+        });
+    }
+
+    function ligar() {
+        animDeriva('st-01', false);
+        animOp('st-02', { formula: 'A ∩ B', legenda: 'está em A e também em B', a: 0, b: 0, l: 1, apaga: 0 });
+        animOp('st-03', { formula: 'A ∪ B', legenda: 'está em A ou em B (ou nos dois)', a: 0, b: 0, l: 0, u: 1, apaga: 1 });
+        animOp('st-04', { formula: 'A − B', legenda: 'está em A, mas não está em B', a: 1, b: 0, l: 0, apaga: 0 });
+        animOp('st-05', { formula: 'A △ B', legenda: 'está em um dos dois, mas não nos dois', a: 1, b: 1, l: 0, apaga: 0 });
+        animPontos('st-06');
+        animVazio('st-07');
+        animComut('st-08');
+        animDif('st-09');
+        animDicionario('st-10');
+        animExercicio('st-11', 0, { l: 1 });
+        animExercicio('st-12', 2, { a: 1 });
+        animExercicio('st-13', 3, { b: 1 });
+        animDeriva('st-14', true);
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ligar);
+    else ligar();
+})();
+</script>
+
+<script>
+/* ==============================================================
+   Navegação slide a slide: setas, PageUp/Down e espaço.
+
+   As guardas importam: durante a EDIÇÃO (tecla E) e a PINTURA
+   (tecla P) o teclado pertence a esses modos. Sem isso, arrastar
+   um elemento com a seta trocaria de slide no meio da edição.
+   ============================================================== */
+(function () {
+    'use strict';
+    var secs = Array.prototype.slice.call(document.querySelectorAll('body > section'));
+    function atual() {
+        var meio = window.innerHeight / 2, achado = 0;
+        secs.forEach(function (s, i) {
+            var r = s.getBoundingClientRect();
+            if (r.top <= meio && r.bottom > meio) achado = i;
+        });
+        return achado;
+    }
+    function ir(d) {
+        var de = atual(), i = Math.max(0, Math.min(secs.length - 1, de + d));
+        if (i === de) return;
+        secs[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    document.addEventListener('keydown', function (e) {
+        if (document.body.classList.contains('me-on') || document.body.classList.contains('md-on')) return;
+        var t = e.target;
+        if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || ''))) return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (['ArrowDown', 'ArrowRight', 'PageDown', ' ', 'Spacebar'].indexOf(e.key) !== -1) { e.preventDefault(); ir(1); }
+        else if (['ArrowUp', 'ArrowLeft', 'PageUp'].indexOf(e.key) !== -1) { e.preventDefault(); ir(-1); }
+    });
+
+    /* ---------- desenho (tecla P) pertence AO SLIDE ----------
+       O mira-draw pinta num <canvas> único, fixo sobre a janela: sem
+       isto, o traço feito num slide fica pairando sobre todos os outros,
+       como se você tivesse riscado a tela e não o slide.
+
+       Aqui os traços são guardados por slide e trocados junto com ele:
+       sai do slide, o desenho sai; volta, o desenho volta. Usa a API
+       pública `getShapes`/`setShapes` do mira-draw, sem tocar no módulo.
+
+       No palco do mira-remote o desenho é da shell (modelo global
+       sincronizado com o celular), então lá isto não se mete. */
+    var porSlide = {}, ultimo = -1;
+    function trocarDesenho() {
+        if (window.__MIRA_REMOTE_STAGE__) return;
+        var md = window.miraDraw;
+        if (!md || !md.getShapes || !md.setShapes) return;   // deck sem a caneta
+        var i = atual();
+        if (i === ultimo) return;
+        if (ultimo >= 0) porSlide[ultimo] = md.getShapes();  // guarda o que estava
+        ultimo = i;
+        md.setShapes(porSlide[i] || []);
+    }
+    window.addEventListener('load', function () { ultimo = atual(); });
+    window.addEventListener('scroll', trocarDesenho, { passive: true });
+})();
+</script>
+
+<script defer src="mira/mira-edit.js"></script>
+<script defer src="mira/mira-edit-free.js"></script>
+<script defer src="mira/mira-draw.js"></script>
+</body>
+</html>
