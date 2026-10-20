@@ -223,3 +223,80 @@ Retirado da aula 07 em 2026-10-21 a pedido do Piah. Função `animEliminar`; usa
     }
 
 ```
+
+---
+
+# Slide retirado (sem aula definida): Poligonizar, linha fechada vira área
+
+Retirado da aula 07 em 2026-10-21 a pedido do Piah. Função `animPoligonizar`; usa `ciclo`, `onda`, `seg`, `eio` e `texto` do script da aula 07.
+
+## HTML
+
+```html
+    <!-- ============ SLIDE 10 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="square-dashed" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">Poligonizar</span>: linha fechada vira área</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Vetor &gt; Ferramentas de Geometria &gt; Poligonizar</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-10')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-10" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Quadras a partir de eixos</span>
+            <span class="attribute-pill px-5 py-2 text-sm">DWG/DXF do acervo</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Sem snapping, não fecha</span>
+        </div>
+    </section>
+
+```
+
+## JS
+
+```js
+    /* ---------- 10: poligonizar, anel fechado vira quadra ---------- */
+    function animPoligonizar(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var gF = g.append('g'), gL = g.append('g');
+        var cel = d3.range(6).map(function () { return gF.append('rect').attr('fill', COR.marca); });
+        var segs = [];
+        function novoSeg() { var s = gL.append('path').attr('fill', 'none').attr('stroke', COR.tinta).attr('stroke-width', 3.5).attr('stroke-linecap', 'round').attr('pathLength', 1).attr('stroke-dasharray', '1 1'); segs.push(s); return s; }
+        for (var i = 0; i < 18; i++) novoSeg();
+        var furo = g.append('circle').attr('fill', 'none').attr('stroke', COR.acento).attr('stroke-width', 2.5);
+        var aviso = texto(g, 16, 800, COR.acento).text('não fechou');
+        var leg = texto(g, 17, 700, COR.tinta).text('Cada anel fechado vira uma quadra');
+        reger(id, function (ms) {
+            var t = ms / 1000;
+            var xs = [.2, .4, .6, .8].map(function (k) { return F.W * k; }), ys = [.08, .42, .76].map(function (k) { return F.H * k; });
+            var mid = (ys[1] + ys[2]) / 2, gap = 16, L = [];
+            ys.forEach(function (y) { for (var c = 0; c < 3; c++) L.push([xs[c], y, xs[c + 1], y]); });
+            xs.forEach(function (x, xi) {
+                L.push([x, ys[0], x, ys[1]]);
+                if (xi === 3) { L.push([x, ys[1], x, mid - gap]); L.push([x, mid + gap, x, ys[2]]); }
+                else L.push([x, ys[1], x, ys[2]]);
+            });
+            var u = ciclo(t, 0, 11), s = u * 11, volta = seg(s, 9.6, 10.8);
+            L.forEach(function (l, i) {
+                var k = eio(seg(s, .1 * i, .1 * i + .7)) * (1 - volta);
+                segs[i].attr('d', 'M' + l[0] + ',' + l[1] + 'L' + l[2] + ',' + l[3]).attr('stroke-dashoffset', 1 - k);
+            });
+            var fechadas = [0, 1, 2, 3, 4];
+            cel.forEach(function (r, i) {
+                var c = i % 3, rr = Math.floor(i / 3), aberta = (c === 2 && rr === 1);
+                var k = aberta ? 0 : seg(s, 2.6 + .4 * fechadas.indexOf(i), 3.2 + .4 * fechadas.indexOf(i)) * (1 - seg(s, 9, 9.8));
+                r.attr('x', xs[c] + 4).attr('y', ys[rr] + 4).attr('width', xs[c + 1] - xs[c] - 8).attr('height', ys[rr + 1] - ys[rr] - 8)
+                    .attr('opacity', .55 * k);
+            });
+            var av = seg(s, 5, 5.5) * (1 - seg(s, 9, 9.8));
+            furo.attr('cx', xs[3]).attr('cy', mid).attr('r', gap + 6 + 4 * onda(s, 1)).attr('opacity', av);
+            aviso.attr('x', (xs[2] + xs[3]) / 2).attr('y', mid + 6).attr('opacity', av * (.6 + .4 * onda(s, 1)));
+            leg.attr('x', F.W / 2).attr('y', F.H - 10).attr('opacity', seg(s, 4, 4.6) * (1 - seg(s, 9, 9.8)));
+        });
+    }
+
+```

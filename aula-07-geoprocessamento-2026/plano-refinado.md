@@ -135,3 +135,4 @@ Template `escola-governo`. 16 slides. Sem imagens a gerar. Texto visível sem tr
 > **2026-10-21:** slide 7 (Reprojete antes de medir) retirado da aula 07; guardado em `reservado-aula-09.md` para a aula 9. Deck com 15 slides.
 > **2026-10-21:** slide 6 (500 graus dá a volta na Terra) também retirado e guardado em `reservado-aula-09.md`. Deck com 14 slides.
 > **2026-10-21:** slide 12 (Eliminar) retirado e guardado em `reservado-aula-09.md`. No slide 2 o item Eliminar fica apagado, sem selo HOJE; capa passa a 10 ferramentas. Deck com 13 slides.
+> **2026-10-21:** slide 10 (Poligonizar) retirado e guardado em `reservado-aula-09.md`; capa passa a 9 ferramentas. Deck com 12 slides.
