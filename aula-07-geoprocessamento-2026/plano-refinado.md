@@ -133,3 +133,4 @@ Template `escola-governo`. 16 slides. Sem imagens a gerar. Texto visível sem tr
 - **Logo**
 
 > **2026-10-21:** slide 7 (Reprojete antes de medir) retirado da aula 07; guardado em `reservado-aula-09.md` para a aula 9. Deck com 15 slides.
+> **2026-10-21:** slide 6 (500 graus dá a volta na Terra) também retirado e guardado em `reservado-aula-09.md`. Deck com 14 slides.
