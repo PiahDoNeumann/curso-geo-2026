@@ -131,3 +131,5 @@ Template `escola-governo`. 16 slides. Sem imagens a gerar. Texto visível sem tr
 - **Citação:** "Toda ferramenta responde a uma **pergunta**. Comece por ela."
 - **Pílulas (acendem em sequência):** Buffer · Recortar · Dissolver · Junção espacial
 - **Logo**
+
+> **2026-10-21:** slide 7 (Reprojete antes de medir) retirado da aula 07; guardado em `reservado-aula-09.md` para a aula 9. Deck com 15 slides.
