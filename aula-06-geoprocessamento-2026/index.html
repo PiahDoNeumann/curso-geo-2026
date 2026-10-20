@@ -1,62 +1,18 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Aula 6: Regra de conjuntos</title>
-
-<!-- ==========================================================
-     MIRA-DEFAULT · template oficial padrão do Mira
-     ----------------------------------------------------------
-     Um slide = um título em cima e uma animação ocupando todo o
-     resto do quadro 16:9. Sem card, sem pílulas, sem moldura: a
-     animação É o slide.
-
-     Veio do mira-studio-full, mas SÓ a parte de animação. Ficaram
-     de fora, de propósito, as coisas que existem para gravar:
-       - regra dos terços (animação 2/3 + câmera 1/3)
-       - layout de câmera cheia
-       - teleprompter e gravador
-     Slide comum não tem câmera. Quem precisa gravar usa
-     /mira-studio-full (16:9) ou /mira-studio (9:16), que seguem
-     existindo com essas peças.
-
-     ESTRUTURA DE UM SLIDE DE CONTEÚDO (é o contrato; os agentes
-     de animação procuram .anim-stage):
-
-       <section>
-         <div class="slide-main">
-           <h2>Título <span class="accent">destacado</span></h2>
-           <div class="anim-stage"><svg id="..."></svg></div>
-         </div>
-       </section>
-
-     O PALCO OCUPA O QUADRO INTEIRO, de borda a borda: o .anim-stage
-     é absoluto e cobre a <section> toda, por baixo do título. Não é
-     mais "o que sobra depois do título".
-
-     O TÍTULO FICA POR CIMA de tudo que é do template. A faixa de
-     z-index deste arquivo vai até 10; os módulos de autoria
-     (mira-draw, mira-edit) usam 99998 e acima, e continuam acima do
-     título de propósito, senão não daria para desenhar nem editar
-     por cima dele.
-
-     A ANIMAÇÃO EVITA A FAIXA DO TÍTULO. O palco() mede o título e
-     entrega a faixa livre em unidades do viewBox:
-
-       F.topo         y onde a área livre começa (abaixo do título)
-       F.alturaUtil   altura dessa área
-       F.vy(k)        mapeia 0..1 na faixa livre. Use no lugar de F.H * k
-
-     Regra: nada FOCAL acima de F.topo. Ambiente pode atravessar,
-     porque atrás do título ele lê como profundidade, não como
-     conflito. Os 50px de padding continuam sendo a área segura das
-     bordas.
-     ========================================================== -->
-<link href="assets/vendor/inter.css" rel="stylesheet">
-<script src="assets/vendor/d3.v7.min.js"></script>
-<style>
-/* @MIRA:THEME:START */
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Aula 06 · Regra de conjuntos aplicada a geometrias</title>
+    <script src="assets/vendor/tailwind.js"></script>
+    <link href="assets/vendor/aos.css" rel="stylesheet">
+    <script src="assets/vendor/aos.js"></script>
+    <script src="assets/vendor/lucide.js"></script>
+    <script src="assets/vendor/d3.v7.min.js"></script>
+    <link href="assets/vendor/inter.css" rel="stylesheet">
+    <style>
+        /* @MIRA:THEME:START */
 /* MIRA THEME: mira-dark (padrão)
    Identidade clássica do canal: fundo preto, laranja vibrante,
    glassmorphism no estilo clássico do canal. */
@@ -192,129 +148,51 @@ body {
 
 /* @MIRA:THEME:END */
 
-/* ----------------------------------------------------------
-   A estrutura vem DEPOIS do bloco do tema de propósito: o
-   "npx mira-animator new --theme=..." troca só aquele bloco, e
-   o que está aqui embaixo precisa continuar valendo por cima do
-   que o tema trouxer.
-   ---------------------------------------------------------- */
-:root {
-    --accent: var(--mira-primary);
-    --bg: var(--mira-bg);
-    --ink: var(--mira-text);
-    --muted: var(--mira-text-soft);
-    --line: var(--mira-card-border);
-    /* quadro 16:9 que cabe inteiro na janela */
-    --fmt-w: min(100vw, calc(100vh * 16 / 9));
-    --fmt-h: calc(var(--fmt-w) * 9 / 16);
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
+        /* Cor de erro do deck (derivada do padrão Mira #FF6464) */
+        :root { --mira-error: #FF6464; --mira-error-bg: rgba(255, 100, 100, 0.15); --mira-error-border: rgba(255, 100, 100, 0.35); }
 
-html { background: #000000; scroll-behavior: smooth; scroll-snap-type: y proximity; }
-/* sem barra de rolagem: ela roubaria largura do quadro e criaria
-   scroll horizontal em tela cheia. Navegue por seta ou roda. */
-html { scrollbar-width: none; overflow-x: hidden; }
-html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+        /* Diretriz de titulo da capa (CLAUDE.md): quebra equilibrada so no primeiro slide */
+        body > section:first-of-type h1,
+        body > section:first-of-type h2 { text-wrap: balance; }
 
-body {
-    background: #000000;
-    color: var(--ink);
-    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-body > section {
-    position: relative;
-    width: var(--fmt-w);
-    height: var(--fmt-h);
-    min-height: var(--fmt-h);
-    /* centraliza o quadro: em tela que não é 16:9 a sobra vira
-       faixa cinza acima e abaixo, nunca o slide seguinte */
-    margin: calc((100vh - var(--fmt-h)) / 2) 0;
-    scroll-margin-top: calc((100vh - var(--fmt-h)) / 2);
-    overflow: hidden;
-    background: var(--bg);
-    scroll-snap-align: start;
-    display: flex;
-    flex-direction: column;
-    isolation: isolate;
-}
+        /* === CONTROLES DE SLIDE (passagem card-a-card) === */
+        html { scroll-behavior: smooth; }
+        /* Scroll discreto (padrao Mira): a navegacao e por teclado/botao e o
+           progresso ja aparece na barra do topo; a scrollbar fica quase invisivel. */
+        html { scrollbar-width: thin; scrollbar-color: #2e2e2e #0d0d0d; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; background: #0d0d0d; }
+        ::-webkit-scrollbar-track { background: #0d0d0d; }
+        ::-webkit-scrollbar-thumb { background: #2e2e2e; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+        ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 
-/* DIRETIVA DA CAPA: o título do primeiro slide nunca quebra
-   deixando artigo ou preposição sozinho na linha de baixo. */
-body > section:first-of-type h1,
-body > section:first-of-type h2 { text-wrap: balance; }
+        #mira-progress {
+            position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+            background: linear-gradient(90deg, var(--mira-primary), var(--mira-accent-2), var(--mira-primary));
+            background-size: 200% 100%;
+            animation: mira-shimmer 2s linear infinite;
+            z-index: 9999; transition: width 0.1s linear;
+            box-shadow: 0 0 10px var(--mira-glow-strong);
+        }
 
-h1 { font-size: clamp(34px, 7.4vh, 72px); line-height: 1.02; letter-spacing: -.02em; font-weight: 800; }
-h2 { font-size: clamp(28px, 4.6vh, 46px); line-height: 1.1; letter-spacing: -.01em; font-weight: 800; }
-p  { font-size: clamp(15px, 2vh, 20px); line-height: 1.5; color: var(--muted); }
-.accent { color: var(--accent); }
+        @keyframes mira-shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
 
-/* ---------- capa e encerramento: texto centrado no quadro ---------- */
-.slide-centro {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 18px;
-    padding: 50px;
-    text-align: center;
-}
-.slide-centro .marca {
-    font-size: 12px; letter-spacing: .22em; text-transform: uppercase;
-    color: var(--mira-text-softer);
-}
-
-/* ---------- slide de conteúdo: título em cima, animação no resto ---------- */
-.slide-main {
-    width: 100%;
-    height: 100%;
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    padding: 50px;              /* área segura */
-}
-/* o título fica POR CIMA do palco, que agora passa por baixo dele.
-   z-index 10 é o teto deste template; mira-draw e mira-edit vivem em
-   99998 e acima, e continuam por cima do título de propósito, senão
-   não daria para desenhar nem editar sobre ele. */
-.slide-main h2 {
-    flex: 0 0 auto;
-    margin-bottom: 14px;
-    text-align: center;
-    position: relative;
-    z-index: 10;
-}
-
-/* o palco: O QUADRO INTEIRO, de borda a borda.
-
-   `inset: 0` resolve contra a <section>, porque o .slide-main é
-   estático e a <section> é `position: relative`. Sair do fluxo é o
-   que faz o palco passar POR BAIXO do título em vez de começar
-   depois dele.
-
-   Os resets de fundo e raio não são enfeite. Quando o
-   "new --theme=..." injeta o base.css, ele traz `.anim-stage` com
-   altura fixa (clamp 400-620px), glow radial e cantos arredondados,
-   que é a linguagem de CARD. Aqui o palco É o slide: sem neutralizar
-   isso, o deck gerado sai com uma caixinha arredondada no meio, que
-   é exatamente o que este template existe para não ser. */
-.anim-stage {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    width: auto;
-    height: auto;
-    min-height: 0;
-    background: none;
-    border-radius: 0;
-}
-.anim-stage svg { width: 100%; height: 100%; display: block; }
-
+        #mira-next {
+            position: fixed; bottom: 32px; right: 32px;
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--mira-primary); color: var(--mira-bg);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: none;
+            opacity: 0; transform: translateY(20px);
+            transition: all 0.3s ease; z-index: 9998;
+            box-shadow: 0 4px 20px var(--mira-glow-strong);
+        }
+        #mira-next.visible { opacity: 1; transform: translateY(0); }
+        #mira-next:hover { transform: translateY(-3px) scale(1.1); }
+    
 /* @MIRA:RESPONSIVE:START */
 /* ============================================================
    MIRA — responsive.css  (camada de reflow mobile-first)
@@ -399,161 +277,293 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
   }
 }
 /* @MIRA:RESPONSIVE:END */
-
-/* Subtítulo de cada slide: logo abaixo do título, por cima do palco */
-.slide-main p.sub {
-    flex: 0 0 auto;
-    text-align: center;
-    position: relative;
-    z-index: 10;
-    margin: -4px 0 0;
-    font-style: italic;
-    font-size: clamp(15px, 2.4vh, 24px);
-    color: var(--mira-text-soft);
-}
 </style>
 </head>
+
 <body>
+    <!-- Controles de slide: barra de progresso + botão flutuante "próximo" -->
+    <div id="mira-progress"></div>
+    <button id="mira-next" aria-label="Próximo slide">
+        <i data-lucide="chevron-down" class="w-6 h-6" id="mira-next-icon"></i>
+    </button>
 
-<!-- === SLIDE 1 · ABERTURA === -->
-<section>
-    <div class="slide-main">
-        <h2>Geometria também é <span class="accent">conjunto</span></h2>
-        <p class="sub">A regra por trás de toda ferramenta do mapa</p>
-        <div class="anim-stage"><svg id="st-01" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 1: CAPA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6">
+        <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover" style="opacity: 0.5;">
+            <source src="header-bg.mp4" type="video/mp4">
+        </video>
+        <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0.55) 40%, rgba(0,0,0,0.85));"></div>
+        <div class="relative z-10 text-center max-w-4xl" data-aos="fade-up">
+            <p class="attribute-pill inline-block px-5 py-2 text-sm tracking-widest uppercase text-soft mb-8">Escola de Governo · Toledo-PR</p>
+            <h1 class="text-5xl md:text-6xl font-black leading-tight mb-6">
+                Geometria também é<br>
+                <span class="primary-color">conjunto</span>
+            </h1>
+            <p class="text-xl text-soft max-w-2xl mx-auto mb-10">Aula 6 de 10. A regra de conjuntos por trás de toda ferramenta do mapa.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-10">
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">6ª</p>
+                    <p class="text-softer text-sm mt-1">de 10 aulas</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">4</p>
+                    <p class="text-softer text-sm mt-1">operações de conjuntos</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">3</p>
+                    <p class="text-softer text-sm mt-1">exercícios para resolver</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">0</p>
+                    <p class="text-softer text-sm mt-1">cliques no QGIS nesta parte</p>
+                </div>
+            </div>
+            <div class="flex items-center justify-center gap-3 text-softer text-sm">
+                <i data-lucide="users" class="w-4 h-4 primary-color"></i> Romano e Valdecir
+                <span class="opacity-40">|</span>
+                <i data-lucide="calendar" class="w-4 h-4 primary-color"></i> 13/10/2026
+            </div>
+            <img src="logo.png" alt="Escola de Governo, Município de Toledo-PR" class="h-16 mx-auto mt-10 opacity-90">
+        </div>
+        <style>
+            .capa-stat { animation: capa-stat-glow 6s ease-in-out infinite; }
+            .capa-stat:nth-child(2) { animation-delay: 1.5s; }
+            .capa-stat:nth-child(3) { animation-delay: 3s; }
+            .capa-stat:nth-child(4) { animation-delay: 4.5s; }
+            @keyframes capa-stat-glow {
+                0%, 70%, 100% { border-color: var(--mira-card-border); box-shadow: 0 10px 30px var(--mira-glow-soft); }
+                15% { border-color: var(--mira-icon-border); box-shadow: 0 10px 40px var(--mira-glow-strong); }
+            }
+        </style>
+    </section>
 
-<!-- === SLIDE 2 · E (interseção) === -->
-<section>
-    <div class="slide-main">
-        <h2><span class="accent">E</span>: o que as duas têm</h2>
-        <p class="sub">Interseção (A∩B): a região comum aos dois</p>
-        <div class="anim-stage"><svg id="st-02" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 2 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="combine" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">E</span>: o que as duas têm</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Interseção (A∩B): a região comum aos dois</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-02')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-02" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+    </section>
 
-<!-- === SLIDE 3 · OU (união) === -->
-<section>
-    <div class="slide-main">
-        <h2><span class="accent">OU</span>: um, outro ou ambos</h2>
-        <p class="sub">União (A∪B): junta as duas áreas em uma só</p>
-        <div class="anim-stage"><svg id="st-03" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 3 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="merge" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">OU</span>: um, outro ou ambos</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">União (A∪B): junta as duas áreas em uma só</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-03')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-03" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+    </section>
 
-<!-- === SLIDE 4 · MAS NÃO (diferença) === -->
-<section>
-    <div class="slide-main">
-        <h2><span class="accent">MAS NÃO</span>: tira um do outro</h2>
-        <p class="sub">Diferença (A−B): o que é de A e não é de B</p>
-        <div class="anim-stage"><svg id="st-04" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 4 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="scissors" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">MAS NÃO</span>: tira um do outro</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Diferença (A−B): o que é de A e não é de B</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-04')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-04" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+    </section>
 
-<!-- === SLIDE 5 · UM OU OUTRO (diferença simétrica) === -->
-<section>
-    <div class="slide-main">
-        <h2><span class="accent">Um ou outro</span>, nunca os dois</h2>
-        <p class="sub">Diferença simétrica (A△B): tudo, menos a parte comum</p>
-        <div class="anim-stage"><svg id="st-05" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 5 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="shuffle" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">Um ou outro</span>, nunca os dois</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Diferença simétrica (A△B): tudo, menos a parte comum</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-05')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-05" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+    </section>
 
-<!-- === SLIDE 6 · POLÍGONO É NUVEM DE PONTOS === -->
-<section>
-    <div class="slide-main">
-        <h2>Polígono é <span class="accent">nuvem de pontos</span></h2>
-        <p class="sub">Cada ponto está dentro ou fora, e é assim que o computador decide</p>
-        <div class="anim-stage"><svg id="st-06" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 6 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="chart-scatter" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Polígono é <span class="primary-color">nuvem de pontos</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Cada ponto está dentro ou fora, e é assim que o computador decide</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-06')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-06" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Dentro: o ponto cai no polígono</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Fora: o ponto fica de fora</span>
+            <span class="attribute-pill px-5 py-2 text-sm">O computador testa ponto por ponto</span>
+        </div>
+    </section>
 
-<!-- === SLIDE 7 · QUANDO NÃO SE ENCONTRAM === -->
-<section>
-    <div class="slide-main">
-        <h2>E se <span class="accent">não se encontram</span>?</h2>
-        <p class="sub">Interseção vazia é um resultado válido, não um erro</p>
-        <div class="anim-stage"><svg id="st-07" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 7 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="circle-off" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">E se <span class="primary-color">não se encontram</span>?</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Interseção vazia é um resultado válido, não um erro</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-07')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-07" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Interseção vazia é resultado, não erro</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Complemento: tudo o que está fora de A</span>
+        </div>
+    </section>
 
-<!-- === SLIDE 8 · ORDEM NÃO MUDA === -->
-<section>
-    <div class="slide-main">
-        <h2>Trocar a ordem <span class="accent">não muda nada</span></h2>
-        <p class="sub">A∩B = B∩A, e A∪B = B∪A</p>
-        <div class="anim-stage"><svg id="st-08" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 8 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="arrow-left-right" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Trocar a ordem <span class="primary-color">não muda nada</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">A∩B = B∩A, e A∪B = B∪A</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-08')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-08" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Interseção e união: a ordem não importa</span>
+        </div>
+    </section>
 
-<!-- === SLIDE 9 · ORDEM MUDA NA DIFERENÇA === -->
-<section>
-    <div class="slide-main">
-        <h2>Na diferença, a ordem <span class="accent">muda tudo</span></h2>
-        <p class="sub">A−B e B−A são resultados diferentes</p>
-        <div class="anim-stage"><svg id="st-09" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 9 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="git-compare" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Na diferença, a ordem <span class="primary-color">muda tudo</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">A−B e B−A são resultados diferentes</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-09')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-09" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">A−B: o que sobra de A</span>
+            <span class="attribute-pill px-5 py-2 text-sm">B−A: o que sobra de B</span>
+        </div>
+    </section>
 
-<!-- === SLIDE 10 · DICIONÁRIO === -->
-<section>
-    <div class="slide-main">
-        <h2>Do português para a <span class="accent">operação</span></h2>
-        <p class="sub">Quatro palavras que decidem qual ferramenta usar</p>
-        <div class="anim-stage"><svg id="st-10" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 10 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="languages" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Do português para a <span class="primary-color">operação</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Quatro palavras que decidem qual ferramenta usar</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-10')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-10" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+    </section>
 
-<!-- === SLIDE 11 · EXERCÍCIO 1 === -->
-<section>
-    <div class="slide-main">
-        <h2>Em A <span class="accent">e</span> em B</h2>
-        <p class="sub">Pense, escolha, e a resposta aparece</p>
-        <div class="anim-stage"><svg id="st-11" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 11 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="circle-help" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Em A <span class="primary-color">e</span> em B</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Pense, escolha, e a resposta aparece</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-11')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-11" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+    </section>
 
-<!-- === SLIDE 12 · EXERCÍCIO 2 === -->
-<section>
-    <div class="slide-main">
-        <h2>Em A <span class="accent">mas não</span> em B</h2>
-        <p class="sub">Duas formas, uma resposta só</p>
-        <div class="anim-stage"><svg id="st-12" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 12 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="circle-help" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Em A <span class="primary-color">mas não</span> em B</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Duas formas, uma resposta só</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-12')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-12" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+    </section>
 
-<!-- === SLIDE 13 · EXERCÍCIO 3 === -->
-<section>
-    <div class="slide-main">
-        <h2>Em B <span class="accent">mas não</span> em A</h2>
-        <p class="sub">Mesmas formas, ordem trocada: o resultado muda</p>
-        <div class="anim-stage"><svg id="st-13" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 13 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="circle-help" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Em B <span class="primary-color">mas não</span> em A</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Mesmas formas, ordem trocada: o resultado muda</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-13')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-13" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+    </section>
 
-<!-- === SLIDE 14 · ENCERRAMENTO === -->
-<section>
-    <div class="slide-main">
-        <h2>Obrigado</h2>
-        <p class="sub">Pense em conjuntos antes de abrir a ferramenta</p>
-        <div class="anim-stage"><svg id="st-14" preserveAspectRatio="xMidYMid meet"></svg></div>
-    </div>
-</section>
+    <!-- ============ SLIDE 14: ENCERRAMENTO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-16">
+        <div class="relative z-10 text-center max-w-4xl" data-aos="zoom-in">
+            <div class="icon-hero mx-auto mb-8" style="width:72px;height:72px;border-radius:20px;">
+                <i data-lucide="quote" class="primary-color w-9 h-9"></i>
+            </div>
+            <h2 class="text-5xl md:text-6xl font-black mb-8">Obrigado</h2>
+            <blockquote class="text-2xl md:text-3xl text-soft leading-snug mb-12">
+                "Pense em <span class="primary-color font-bold">conjuntos</span> antes de abrir a ferramenta."
+            </blockquote>
+            <div class="flex flex-wrap items-center justify-center gap-3 mb-10">
+                <span class="attribute-pill check-pill px-5 py-2">E · ∩</span>
+                <span class="attribute-pill check-pill px-5 py-2">OU · ∪</span>
+                <span class="attribute-pill check-pill px-5 py-2">MAS NÃO · −</span>
+                <span class="attribute-pill check-pill px-5 py-2">UM OU OUTRO · △</span>
+            </div>
+            <img src="logo.png" alt="Escola de Governo, Município de Toledo-PR" class="h-14 mx-auto opacity-90">
+        </div>
+        <style>
+            .check-pill { animation: check-on 8s ease-in-out infinite; }
+            .check-pill:nth-child(2) { animation-delay: 2s; }
+            .check-pill:nth-child(3) { animation-delay: 4s; }
+            .check-pill:nth-child(4) { animation-delay: 6s; }
+            @keyframes check-on { 0%, 25%, 100% { color: var(--mira-text-soft); border-color: var(--mira-pill-border); } 8% { color: var(--mira-primary); border-color: var(--mira-icon-border); background: var(--mira-icon-bg); } }
+        </style>
+    </section>
 
-<script>
-/* ==============================================================
-   Aula 6: regra de conjuntos aplicada a geometrias.
+    <script>
+        AOS.init({ duration: 800, once: true });
+        lucide.createIcons();
 
-   Todos os slides usam o MESMO diagrama de Venn literal (A em laranja
-   da marca, B em branco), o que muda é a operação mostrada. O motor
-   criarVenn() monta as regiões com clipPath e mask, então interseção,
-   diferença e união são desenhadas de verdade, não simuladas.
-
-   Cada animação declara o quadro como função de `ms`, e o regente
-   decide QUE `ms` passar: slide fora da tela fica congelado no zero,
-   ao entrar recomeça a história do início.
-   ============================================================== */
 (function () {
     'use strict';
 
@@ -577,6 +587,8 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
             return;
         }
         var relogio = null, visivel = false, ultimoZero = false;
+        window.__miraReplay = window.__miraReplay || {};
+        window.__miraReplay[svgId] = function () { relogio = null; };   // botão replay: recomeça do zero
         d3.timer(function (ms) {
             if (!visivel) {
                 /* fora da tela: desenha o quadro zero UMA vez e para de gastar */
@@ -594,7 +606,7 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
                 relogio = null;
                 ultimoZero = false;
             });
-        }, { threshold: 0.6 }).observe(slide);
+        }, { threshold: 0.4 }).observe(slide);
     }
 
     /* ---------- palco: o quadro inteiro, menos a faixa do título ---------- */
@@ -726,24 +738,6 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
         return { g: g, atualizar: atualizar };
     }
 
-    /* ---------- 1 e 14: A e B respiram, aproximam e afastam ---------- */
-    function animDeriva(svgId, orbita) {
-        var p = palco(svgId); if (!p) return;
-        var svg = p.svg, F = p.F, CICLO = orbita ? 20000 : 14000;
-        var v = criarVenn(svg, svg.append('g'), svgId);
-        reger(svgId, function (ms) {
-            var G = geo(F, orbita ? .22 : .32, .52), t = (ms % CICLO) / CICLO;
-            var k = .5 - .5 * Math.cos(2 * Math.PI * t);
-            var d = G.R * (orbita ? mix(1.9, 1.15, k) : mix(2.9, 1.0, k));
-            v.atualizar({
-                cx: G.cx, cy: G.cy, R: G.R, d: d,
-                rot: orbita ? ms / 1000 * .11 : 0,
-                hl: { l: seg(k, .35, .9) * .55 },
-                op: Math.min(1, ms / 800)
-            });
-        });
-    }
-
     /* ---------- 2 a 5: uma operação, do encontro ao resultado ---------- */
     function animOp(svgId, cfg) {
         var p = palco(svgId); if (!p) return;
@@ -778,10 +772,10 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
             .attr('pathLength', 1).attr('stroke-dasharray', '1 1');
         var seed = 20261012;
         function rnd() { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }
-        var COLS = 34, LINS = 15, pts = [];
+        var COLS = 46, LINS = 15, pts = [];
         for (var i = 0; i < COLS; i++) {
             for (var j = 0; j < LINS; j++) {
-                var x = -1.9 + 3.8 * (i + .5 + (rnd() - .5) * .8) / COLS;
+                var x = -2.6 + 5.2 * (i + .5 + (rnd() - .5) * .8) / COLS;
                 var y = -1.05 + 2.1 * (j + .5 + (rnd() - .5) * .8) / LINS;
                 pts.push({ x: x, y: y, dentro: d3.polygonContains(poly, [x, y]), u: rnd() * .16,
                     el: raiz.append('circle') });
@@ -800,7 +794,7 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
             forma.attr('d', 'M' + poly.map(function (q) { return (cx + q[0] * s) + ',' + (cy + q[1] * s); }).join('L') + 'Z')
                 .attr('stroke-dashoffset', 1 - eio(seg(t, .02, .14)))
                 .attr('fill-opacity', .08 * seg(t, .08, .16)).attr('opacity', op * fim);
-            var sx = mix(-2, 2, seg(t, .36, .66)), varrendo = seg(t, .36, .37) > 0;
+            var sx = mix(-2.7, 2.7, seg(t, .36, .66)), varrendo = seg(t, .36, .37) > 0;
             var nIn = 0, nOut = 0;
             pts.forEach(function (q) {
                 var ap = eio(seg(t, .10 + q.u, .17 + q.u));
@@ -1027,8 +1021,9 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
         });
     }
 
+    window.miraReplay = function (id) { var f = window.__miraReplay && window.__miraReplay[id]; if (f) f(); };
+
     function ligar() {
-        animDeriva('st-01', false);
         animOp('st-02', { formula: 'A ∩ B', legenda: 'está em A e também em B', a: 0, b: 0, l: 1, apaga: 0 });
         animOp('st-03', { formula: 'A ∪ B', legenda: 'está em A ou em B (ou nos dois)', a: 0, b: 0, l: 0, u: 1, apaga: 1 });
         animOp('st-04', { formula: 'A − B', legenda: 'está em A, mas não está em B', a: 1, b: 0, l: 0, apaga: 0 });
@@ -1041,75 +1036,79 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
         animExercicio('st-11', 0, { l: 1 });
         animExercicio('st-12', 2, { a: 1 });
         animExercicio('st-13', 3, { b: 1 });
-        animDeriva('st-14', true);
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ligar);
     else ligar();
 })();
-</script>
 
-<script>
-/* ==============================================================
-   Navegação slide a slide: setas, PageUp/Down e espaço.
+        // === CONTROLES DE SLIDE: navegação card-a-card (progresso + botão + teclado) ===
+        (function () {
+            const cardSections = Array.from(document.querySelectorAll('body > section'));
+            if (cardSections.length === 0) return;
 
-   As guardas importam: durante a EDIÇÃO (tecla E) e a PINTURA
-   (tecla P) o teclado pertence a esses modos. Sem isso, arrastar
-   um elemento com a seta trocaria de slide no meio da edição.
-   ============================================================== */
-(function () {
-    'use strict';
-    var secs = Array.prototype.slice.call(document.querySelectorAll('body > section'));
-    function atual() {
-        var meio = window.innerHeight / 2, achado = 0;
-        secs.forEach(function (s, i) {
-            var r = s.getBoundingClientRect();
-            if (r.top <= meio && r.bottom > meio) achado = i;
-        });
-        return achado;
-    }
-    function ir(d) {
-        var de = atual(), i = Math.max(0, Math.min(secs.length - 1, de + d));
-        if (i === de) return;
-        secs[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    document.addEventListener('keydown', function (e) {
-        if (document.body.classList.contains('me-on') || document.body.classList.contains('md-on')) return;
-        var t = e.target;
-        if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || ''))) return;
-        if (e.ctrlKey || e.metaKey || e.altKey) return;
-        if (['ArrowDown', 'ArrowRight', 'PageDown', ' ', 'Spacebar'].indexOf(e.key) !== -1) { e.preventDefault(); ir(1); }
-        else if (['ArrowUp', 'ArrowLeft', 'PageUp'].indexOf(e.key) !== -1) { e.preventDefault(); ir(-1); }
-    });
+            const progress = document.getElementById('mira-progress');
+            const nextBtn = document.getElementById('mira-next');
+            const nextIcon = document.getElementById('mira-next-icon');
 
-    /* ---------- desenho (tecla P) pertence AO SLIDE ----------
-       O mira-draw pinta num <canvas> único, fixo sobre a janela: sem
-       isto, o traço feito num slide fica pairando sobre todos os outros,
-       como se você tivesse riscado a tela e não o slide.
+            const atBottom = () =>
+                (window.scrollY + window.innerHeight) >= (document.documentElement.scrollHeight - 100);
 
-       Aqui os traços são guardados por slide e trocados junto com ele:
-       sai do slide, o desenho sai; volta, o desenho volta. Usa a API
-       pública `getShapes`/`setShapes` do mira-draw, sem tocar no módulo.
+            function currentIndex() {
+                const y = window.scrollY + window.innerHeight * 0.3;
+                let idx = -1;
+                for (let i = 0; i < cardSections.length; i++) {
+                    if (cardSections[i].offsetTop <= y) idx = i;
+                }
+                return idx;
+            }
 
-       No palco do mira-remote o desenho é da shell (modelo global
-       sincronizado com o celular), então lá isto não se mete. */
-    var porSlide = {}, ultimo = -1;
-    function trocarDesenho() {
-        if (window.__MIRA_REMOTE_STAGE__) return;
-        var md = window.miraDraw;
-        if (!md || !md.getShapes || !md.setShapes) return;   // deck sem a caneta
-        var i = atual();
-        if (i === ultimo) return;
-        if (ultimo >= 0) porSlide[ultimo] = md.getShapes();  // guarda o que estava
-        ultimo = i;
-        md.setShapes(porSlide[i] || []);
-    }
-    window.addEventListener('load', function () { ultimo = atual(); });
-    window.addEventListener('scroll', trocarDesenho, { passive: true });
-})();
-</script>
+            function goTo(i) {
+                const idx = Math.max(0, Math.min(cardSections.length - 1, i));
+                cardSections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
 
-<script defer src="mira/mira-edit.js"></script>
-<script defer src="mira/mira-edit-free.js"></script>
-<script defer src="mira/mira-draw.js"></script>
+            window.addEventListener('scroll', () => {
+                const docH = document.documentElement.scrollHeight - window.innerHeight;
+                progress.style.width = (docH > 0 ? (window.scrollY / docH) * 100 : 0) + '%';
+                nextBtn.classList.toggle('visible', window.scrollY > 300);
+                nextIcon.setAttribute('data-lucide', atBottom() ? 'chevron-up' : 'chevron-down');
+                lucide.createIcons();
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (atBottom()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+                goTo(currentIndex() + 1);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key)) {
+                    e.preventDefault();
+                    goTo(currentIndex() + 1);
+                } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+                    e.preventDefault();
+                    const idx = currentIndex();
+                    if (idx <= 0) window.scrollTo({ top: 0, behavior: 'smooth' });
+                    else goTo(idx - 1);
+                } else if (e.key === 'Home') {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (e.key === 'End') {
+                    e.preventDefault();
+                    goTo(cardSections.length - 1);
+                } else if (e.key.toLowerCase() === 'f') {
+                    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                    else document.exitFullscreen();
+                }
+            });
+        })();
+    </script>
+
+    <!-- Modo edição (reordenar slides): tecla E ou ?edit=1 -->
+    <script src="mira/mira-edit.js" defer></script>
+    <!-- Edição livre estilo Canva (mover/redimensionar/rotacionar/duplicar/excluir/texto): tecla E -->
+    <script src="mira/mira-edit-free.js" defer></script>
+    <!-- mira-draw (desenhar sobre o slide): tecla P ou ?draw=1 -->
+    <script src="mira/mira-draw.js" defer></script>
 </body>
+
 </html>
