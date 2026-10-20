@@ -310,14 +310,14 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
                 Qual é a sua<br>
                 <span class="primary-color">pergunta</span>?
             </h1>
-            <p class="text-xl text-soft max-w-2xl mx-auto mb-10">Aula 7 de 10. Onze ferramentas do QGIS, cada uma responde a uma pergunta sobre o território.</p>
+            <p class="text-xl text-soft max-w-2xl mx-auto mb-10">Aula 7 de 10. Dez ferramentas do QGIS, cada uma responde a uma pergunta sobre o território.</p>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-10">
                 <div class="glass-card p-5 capa-stat">
                     <p class="text-4xl font-black primary-color">7ª</p>
                     <p class="text-softer text-sm mt-1">de 10 aulas</p>
                 </div>
                 <div class="glass-card p-5 capa-stat">
-                    <p class="text-4xl font-black primary-color">11</p>
+                    <p class="text-4xl font-black primary-color">10</p>
                     <p class="text-softer text-sm mt-1">ferramentas</p>
                 </div>
                 <div class="glass-card p-5 capa-stat">
@@ -503,26 +503,6 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
             <span class="attribute-pill px-5 py-2 text-sm">Com campo: um polígono por valor</span>
             <span class="attribute-pill px-5 py-2 text-sm">Sem campo: um polígono só</span>
             <span class="attribute-pill px-5 py-2 text-sm">Os outros atributos se perdem</span>
-        </div>
-    </section>
-
-    <!-- ============ SLIDE 12 ============ -->
-    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
-        <div class="text-center mb-8" data-aos="fade-up">
-            <div class="slide-title-row justify-center flex items-center gap-4">
-                <div class="icon-hero"><i data-lucide="eraser" class="primary-color w-6 h-6"></i></div>
-                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">Eliminar</span>: a lasca vai para o vizinho</h2>
-            </div>
-            <p class="text-soft text-lg mt-3">Limpa o resto fino que sobra de interseção e união</p>
-        </div>
-        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
-            <button class="replay-btn" onclick="window.miraReplay('st-12')">↻ replay</button>
-            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-12" preserveAspectRatio="xMidYMid meet"></svg></div>
-        </div>
-        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
-            <span class="attribute-pill px-5 py-2 text-sm">Precisa de seleção antes</span>
-            <span class="attribute-pill px-5 py-2 text-sm">Maior área</span>
-            <span class="attribute-pill px-5 py-2 text-sm">Maior fronteira comum</span>
         </div>
     </section>
 
@@ -716,15 +696,15 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
         var F = p.F, g = p.svg.append('g');
         var itens = [['Buffer', ''], ['Recortar', ''], ['Envoltória convexa', ''], ['Diferença', '−'],
             ['Dissolver', ''], ['Interseção', '∩'], ['Diferença simétrica', '△'], ['União', '∪'],
-            ['Eliminar polígonos selecionados', '']];
+            ['Eliminar polígonos selecionados', null]];
         var ordemConj = [5, 7, 3, 6];
         var cab = texto(g, 14, 700, COR.tinta).attr('letter-spacing', 2).attr('opacity', .55)
             .text('VETOR  >  FERRAMENTAS DE GEOPROCESSAMENTO');
         var linhas = itens.map(function (it) {
             var l = g.append('g');
-            var conj = !!it[1];
+            var conj = !!it[1], fora = it[1] === null;
             return {
-                l: l, conj: conj,
+                l: l, conj: conj, fora: fora,
                 fundo: l.append('rect').attr('rx', 8).attr('fill', COR.marca),
                 nome: texto(l, 19, 600, COR.tinta).attr('text-anchor', 'start').text(it[0] + '...'),
                 tag: texto(l, conj ? 24 : 13, 800, COR.marca).attr('letter-spacing', conj ? 0 : 1.5).text(conj ? it[1] : 'HOJE')
@@ -744,13 +724,13 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
                     var k = Math.floor(s / 1.3);
                     if (ordemConj[k] === i) h = Math.sin(Math.PI * ((s % 1.3) / 1.3));
                 }
-                if (s >= 5.5 && s < 9.5 && !r.conj) h = plato(s, 5.5, 9.5, .6) * (.75 + .25 * onda(s, 1));
+                if (s >= 5.5 && s < 9.5 && !r.conj && !r.fora) h = plato(s, 5.5, 9.5, .6) * (.75 + .25 * onda(s, 1));
                 r.l.attr('opacity', e).attr('transform', 'translate(' + (-30 * (1 - e)) + ',0)');
                 r.fundo.attr('x', x0).attr('y', y - lh * .42).attr('width', w).attr('height', lh * .84)
                     .attr('opacity', .05 + .3 * h);
-                r.nome.attr('x', x0 + 20).attr('y', y + 7);
+                r.nome.attr('x', x0 + 20).attr('y', y + 7).attr('opacity', r.fora ? .4 : 1);
                 r.tag.attr('x', x0 + w - 44).attr('y', y + (r.conj ? 8 : 5))
-                    .attr('opacity', r.conj ? (s < 0 ? seg(t, 1.2, 2) : .55 + .45 * h) : h);
+                    .attr('opacity', r.fora ? 0 : r.conj ? (s < 0 ? seg(t, 1.2, 2) : .55 + .45 * h) : h);
             });
         });
     }
@@ -1074,44 +1054,6 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
         });
     }
 
-    /* ---------- 12: eliminar, a lasca vai para o vizinho ---------- */
-    function animEliminar(id) {
-        var p = palco(id); if (!p) return;
-        var F = p.F, g = p.svg.append('g');
-        var corA = d3.interpolateRgb(COR.fundo, COR.marca)(.55);
-        var pA = g.append('path').attr('fill', corA).attr('stroke', corA).attr('stroke-width', 1);
-        var pB = g.append('path').attr('fill', d3.interpolateRgb(COR.fundo, COR.tinta)(.22));
-        var pL = g.append('path');
-        var b1 = g.append('line').attr('stroke', COR.fundo).attr('stroke-width', 3);
-        var b2 = g.append('line').attr('stroke', COR.fundo).attr('stroke-width', 3);
-        var sel = g.append('path').attr('fill', 'none').attr('stroke', COR.acento).attr('stroke-width', 2.5).attr('stroke-dasharray', '6 4');
-        var tA = texto(g, 24, 900, COR.tinta).text('A'), tB = texto(g, 24, 900, COR.tinta).text('B');
-        var sA = texto(g, 14, 600, COR.tinta).attr('opacity', .75).text('maior área'), sB = texto(g, 14, 600, COR.tinta).attr('opacity', .75).text('menor área');
-        var tL = texto(g, 15, 800, COR.acento).text('lasca selecionada');
-        var leg = texto(g, 18, 700, COR.marca).text('a lasca foi para A: maior área');
-        reger(id, function (ms) {
-            var t = ms / 1000, yT = F.H * .12, yB = F.H * .78, xa = F.W * .12, xb = F.W * .82;
-            var l1t = F.W * .47, l1b = F.W * .5, d = 14;
-            var A = [[xa, yT], [l1t, yT], [l1b, yB], [xa, yB]];
-            var Lc = [[l1t, yT], [l1t + d, yT], [l1b + d, yB], [l1b, yB]];
-            var B = [[l1t + d, yT], [xb, yT], [xb, yB], [l1b + d, yB]];
-            var u = ciclo(t, 0, 9), s = u * 9;
-            var selK = plato(s, 1, 3.4, .3), abs = seg(s, 3.2, 4.6) * (1 - seg(s, 8.2, 9));
-            var ent = t < 9 ? seg(s, 0, .8) : 1;
-            pA.attr('d', caminho(A)).attr('opacity', ent); pB.attr('d', caminho(B)).attr('opacity', ent);
-            pL.attr('d', caminho(Lc)).attr('fill', d3.interpolateRgb(COR.acento, corA)(abs)).attr('opacity', ent);
-            b1.attr('x1', l1t).attr('y1', yT).attr('x2', l1b).attr('y2', yB).attr('opacity', ent * (1 - abs));
-            b2.attr('x1', l1t + d).attr('y1', yT).attr('x2', l1b + d).attr('y2', yB).attr('opacity', ent);
-            sel.attr('d', caminho(Lc)).attr('opacity', selK * (.4 + .6 * onda(s, .6)));
-            tA.attr('x', (xa + l1t) / 2).attr('y', (yT + yB) / 2).attr('opacity', ent);
-            tB.attr('x', (l1t + d + xb) / 2).attr('y', (yT + yB) / 2).attr('opacity', ent);
-            sA.attr('x', (xa + l1t) / 2).attr('y', (yT + yB) / 2 + 24).attr('opacity', .75 * ent);
-            sB.attr('x', (l1t + d + xb) / 2).attr('y', (yT + yB) / 2 + 24).attr('opacity', .75 * ent);
-            tL.attr('x', l1t + d / 2).attr('y', yT - 12).attr('opacity', selK);
-            leg.attr('x', F.W / 2).attr('y', F.H - 14).attr('opacity', seg(s, 4.6, 5.2) * (1 - seg(s, 8.2, 9)));
-        });
-    }
-
     /* ---------- 13: junção espacial, contar pontos por bairro ---------- */
     function animJuncao(id) {
         var p = palco(id); if (!p) return;
@@ -1245,7 +1187,6 @@ img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
         animEnvoltoria('st-09');
         animPoligonizar('st-10');
         animDissolver('st-11');
-        animEliminar('st-12');
         animJuncao('st-13');
         animDicionario('st-14');
         animDesafio('st-15');

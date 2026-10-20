@@ -149,3 +149,77 @@ Retirado da aula 07 em 2026-10-21 a pedido do Piah. Mesmo procedimento: colar a 
     }
 
 ```
+
+---
+
+# Slide retirado (sem aula definida): Eliminar, a lasca vai para o vizinho
+
+Retirado da aula 07 em 2026-10-21 a pedido do Piah. Função `animEliminar`; usa `ciclo`, `onda`, `plato`, `seg`, `mix` e `caminho` do script da aula 07.
+
+## HTML
+
+```html
+    <!-- ============ SLIDE 12 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="eraser" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">Eliminar</span>: a lasca vai para o vizinho</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Limpa o resto fino que sobra de interseção e união</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-12')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-12" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Precisa de seleção antes</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Maior área</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Maior fronteira comum</span>
+        </div>
+    </section>
+
+```
+
+## JS
+
+```js
+    /* ---------- 12: eliminar, a lasca vai para o vizinho ---------- */
+    function animEliminar(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var corA = d3.interpolateRgb(COR.fundo, COR.marca)(.55);
+        var pA = g.append('path').attr('fill', corA).attr('stroke', corA).attr('stroke-width', 1);
+        var pB = g.append('path').attr('fill', d3.interpolateRgb(COR.fundo, COR.tinta)(.22));
+        var pL = g.append('path');
+        var b1 = g.append('line').attr('stroke', COR.fundo).attr('stroke-width', 3);
+        var b2 = g.append('line').attr('stroke', COR.fundo).attr('stroke-width', 3);
+        var sel = g.append('path').attr('fill', 'none').attr('stroke', COR.acento).attr('stroke-width', 2.5).attr('stroke-dasharray', '6 4');
+        var tA = texto(g, 24, 900, COR.tinta).text('A'), tB = texto(g, 24, 900, COR.tinta).text('B');
+        var sA = texto(g, 14, 600, COR.tinta).attr('opacity', .75).text('maior área'), sB = texto(g, 14, 600, COR.tinta).attr('opacity', .75).text('menor área');
+        var tL = texto(g, 15, 800, COR.acento).text('lasca selecionada');
+        var leg = texto(g, 18, 700, COR.marca).text('a lasca foi para A: maior área');
+        reger(id, function (ms) {
+            var t = ms / 1000, yT = F.H * .12, yB = F.H * .78, xa = F.W * .12, xb = F.W * .82;
+            var l1t = F.W * .47, l1b = F.W * .5, d = 14;
+            var A = [[xa, yT], [l1t, yT], [l1b, yB], [xa, yB]];
+            var Lc = [[l1t, yT], [l1t + d, yT], [l1b + d, yB], [l1b, yB]];
+            var B = [[l1t + d, yT], [xb, yT], [xb, yB], [l1b + d, yB]];
+            var u = ciclo(t, 0, 9), s = u * 9;
+            var selK = plato(s, 1, 3.4, .3), abs = seg(s, 3.2, 4.6) * (1 - seg(s, 8.2, 9));
+            var ent = t < 9 ? seg(s, 0, .8) : 1;
+            pA.attr('d', caminho(A)).attr('opacity', ent); pB.attr('d', caminho(B)).attr('opacity', ent);
+            pL.attr('d', caminho(Lc)).attr('fill', d3.interpolateRgb(COR.acento, corA)(abs)).attr('opacity', ent);
+            b1.attr('x1', l1t).attr('y1', yT).attr('x2', l1b).attr('y2', yB).attr('opacity', ent * (1 - abs));
+            b2.attr('x1', l1t + d).attr('y1', yT).attr('x2', l1b + d).attr('y2', yB).attr('opacity', ent);
+            sel.attr('d', caminho(Lc)).attr('opacity', selK * (.4 + .6 * onda(s, .6)));
+            tA.attr('x', (xa + l1t) / 2).attr('y', (yT + yB) / 2).attr('opacity', ent);
+            tB.attr('x', (l1t + d + xb) / 2).attr('y', (yT + yB) / 2).attr('opacity', ent);
+            sA.attr('x', (xa + l1t) / 2).attr('y', (yT + yB) / 2 + 24).attr('opacity', .75 * ent);
+            sB.attr('x', (l1t + d + xb) / 2).attr('y', (yT + yB) / 2 + 24).attr('opacity', .75 * ent);
+            tL.attr('x', l1t + d / 2).attr('y', yT - 12).attr('opacity', selK);
+            leg.attr('x', F.W / 2).attr('y', F.H - 14).attr('opacity', seg(s, 4.6, 5.2) * (1 - seg(s, 8.2, 9)));
+        });
+    }
+
+```
