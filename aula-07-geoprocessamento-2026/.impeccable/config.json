@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "decks/2026-10-20 curso-geo-toledo-2026-aula-07/index.html"
+        ],
+        "createdAt": "2026-10-20T13:39:12.249Z",
+        "reason": "Claude: glow vem do tema mira-dark e da casca da aula 06, identidade já usada em todas as aulas da série"
+      }
+    ]
+  }
+}

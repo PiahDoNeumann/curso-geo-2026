@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+<!-- ==========================================================
+     ESCOLA-GOVERNO · template do Curso de Geoprocessamento,
+     Escola de Governo de Toledo-PR
+     ----------------------------------------------------------
+     Casca extraída da aula 06: capa com vídeo (header-bg.mp4),
+     pílula "Escola de Governo · Toledo-PR", logo (logo.png) na
+     capa e no encerramento, slides de conteúdo em glass-card com
+     animação D3 em loop, navegação por setas, modos E e P.
+     Para criar um slide novo, duplique o SLIDE 2 e troque o id
+     do svg (st-NN) e a chamada em ligar().
+     ========================================================== -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Aula 07 · Ferramentas de geoprocessamento do QGIS</title>
+    <script src="assets/vendor/tailwind.js"></script>
+    <link href="assets/vendor/aos.css" rel="stylesheet">
+    <script src="assets/vendor/aos.js"></script>
+    <script src="assets/vendor/lucide.js"></script>
+    <script src="assets/vendor/d3.v7.min.js"></script>
+    <link href="assets/vendor/inter.css" rel="stylesheet">
+    <style>
+        /* @MIRA:THEME:START */
+/* MIRA THEME: mira-dark (padrão)
+   Identidade clássica do canal: fundo preto, laranja vibrante,
+   glassmorphism no estilo clássico do canal. */
+:root {
+    --mira-primary: #FF904D;
+    --mira-crop: #35D07F;
+    --mira-bg: #000000;
+    --mira-text: #ffffff;
+    --mira-text-soft: rgba(255, 255, 255, 0.70);
+    --mira-text-softer: rgba(255, 255, 255, 0.50);
+    --mira-card-bg: rgba(255, 255, 255, 0.05);
+    --mira-card-border: rgba(255, 255, 255, 0.10);
+    --mira-glow-soft: rgba(255, 144, 77, 0.15);
+    --mira-glow-strong: rgba(255, 144, 77, 0.25);
+    --mira-icon-bg: rgba(255, 144, 77, 0.15);
+    --mira-icon-border: rgba(255, 144, 77, 0.30);
+    --mira-pill-bg: rgba(255, 255, 255, 0.04);
+    --mira-pill-border: rgba(255, 255, 255, 0.08);
+    --mira-stage-glow: rgba(255, 144, 77, 0.06);
+    --mira-accent-2: #FFC766;
+}
+
+
+/* ============================================================
+   MIRA — base.css
+   Estrutura compartilhada por todos os temas.
+   Os temas definem apenas as CSS variables (--mira-*).
+   ============================================================ */
+
+body {
+    background: var(--mira-bg);
+    min-height: 100vh;
+    color: var(--mira-text);
+    font-family: 'Inter', sans-serif;
+}
+
+.primary-color { color: var(--mira-primary); }
+.primary-bg { background: var(--mira-primary); }
+
+.glass-card {
+    background: var(--mira-card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--mira-card-border);
+    box-shadow: 0 10px 30px var(--mira-glow-soft);
+    transition: all 0.3s ease;
+    border-radius: 0.75rem;
+}
+
+.glass-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px var(--mira-glow-strong);
+}
+
+.icon-hero {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    background: var(--mira-icon-bg);
+    border: 1px solid var(--mira-icon-border);
+}
+
+.attribute-pill {
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    transition: all 0.25s ease;
+    border-radius: 9999px;
+}
+
+.attribute-pill:hover {
+    background: var(--mira-icon-bg);
+    border-color: var(--mira-icon-border);
+    transform: translateY(-3px);
+}
+
+/* Palco de animação D3 — tamanho padrão do canvas */
+.anim-stage {
+    width: 100%;
+    height: clamp(400px, 60vh, 620px);
+    background: radial-gradient(circle at 50% 50%, var(--mira-stage-glow), transparent 70%);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.anim-stage svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.replay-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    color: var(--mira-text-soft);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.replay-btn:hover {
+    background: var(--mira-icon-bg);
+    color: var(--mira-primary);
+}
+
+.text-soft { color: var(--mira-text-soft); }
+.text-softer { color: var(--mira-text-softer); }
+
+@keyframes mira-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+@keyframes mira-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes mira-gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* @MIRA:THEME:END */
+
+        /* Cor de erro do deck (derivada do padrão Mira #FF6464) */
+        :root { --mira-error: #FF6464; --mira-error-bg: rgba(255, 100, 100, 0.15); --mira-error-border: rgba(255, 100, 100, 0.35); }
+
+        /* Diretriz de titulo da capa (CLAUDE.md): quebra equilibrada so no primeiro slide */
+        body > section:first-of-type h1,
+        body > section:first-of-type h2 { text-wrap: balance; }
+
+        /* === CONTROLES DE SLIDE (passagem card-a-card) === */
+        html { scroll-behavior: smooth; }
+        /* Scroll discreto (padrao Mira): a navegacao e por teclado/botao e o
+           progresso ja aparece na barra do topo; a scrollbar fica quase invisivel. */
+        html { scrollbar-width: thin; scrollbar-color: #2e2e2e #0d0d0d; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; background: #0d0d0d; }
+        ::-webkit-scrollbar-track { background: #0d0d0d; }
+        ::-webkit-scrollbar-thumb { background: #2e2e2e; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+        ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+
+        #mira-progress {
+            position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+            background: linear-gradient(90deg, var(--mira-primary), var(--mira-accent-2), var(--mira-primary));
+            background-size: 200% 100%;
+            animation: mira-shimmer 2s linear infinite;
+            z-index: 9999; transition: width 0.1s linear;
+            box-shadow: 0 0 10px var(--mira-glow-strong);
+        }
+
+        @keyframes mira-shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+
+        #mira-next {
+            position: fixed; bottom: 32px; right: 32px;
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--mira-primary); color: var(--mira-bg);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: none;
+            opacity: 0; transform: translateY(20px);
+            transition: all 0.3s ease; z-index: 9998;
+            box-shadow: 0 4px 20px var(--mira-glow-strong);
+        }
+        #mira-next.visible { opacity: 1; transform: translateY(0); }
+        #mira-next:hover { transform: translateY(-3px) scale(1.1); }
+    
+/* @MIRA:RESPONSIVE:START */
+/* ============================================================
+   MIRA — responsive.css  (camada de reflow mobile-first)
+   Objetivo: TODO slide 16:9 do Mira vira legível no celular em
+   retrato SEM arquivo mobile separado. O mesmo deck se reorganiza:
+   fontes encolhem, grids empilham, padding reduz, palcos escalam.
+
+   Estratégia: os decks nascem "desktop-first" (classes Tailwind com
+   tamanhos fixos: text-6xl, p-10, ...). Esta camada sobrescreve essas
+   classes abaixo de 640px. Usa !important de propósito — precisa
+   vencer o Tailwind CDN (injetado em runtime) em decks legados sem
+   reescrever o HTML. Os clamps têm teto ~= valor desktop, então em
+   telas largas nada muda; só encolhem no estreito.
+   ============================================================ */
+
+/* Guarda universal contra overflow horizontal (o "print cortado" no zap). */
+html, body { max-width: 100%; overflow-x: hidden; }
+img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
+
+@media (max-width: 640px) {
+
+  /* --- Tipografia fluida: encolhe títulos gigantes no celular --- */
+  .text-9xl { font-size: clamp(3rem, 12vw, 5rem)      !important; line-height: 1.05 !important; }
+  .text-8xl { font-size: clamp(2.75rem, 11vw, 4.5rem) !important; line-height: 1.06 !important; }
+  .text-7xl { font-size: clamp(2.25rem, 10vw, 3.75rem)!important; line-height: 1.08 !important; }
+  .text-6xl { font-size: clamp(2rem, 9vw, 3rem)       !important; line-height: 1.1  !important; }
+  .text-5xl { font-size: clamp(1.75rem, 8vw, 2.5rem)  !important; line-height: 1.12 !important; }
+  .text-4xl { font-size: clamp(1.5rem, 7vw, 2rem)     !important; line-height: 1.15 !important; }
+  .text-3xl { font-size: clamp(1.35rem, 6vw, 1.75rem) !important; line-height: 1.2  !important; }
+  .text-2xl { font-size: clamp(1.2rem, 5vw, 1.5rem)   !important; line-height: 1.25 !important; }
+  .text-xl  { font-size: clamp(1.05rem, 4.5vw, 1.25rem)!important; line-height: 1.3 !important; }
+
+  /* Títulos: quebram entre palavras; só partem uma palavra se ela sozinha
+     estourar a largura. Sem hyphens:auto — em PT ele hifena no meio
+     ("pode-rosas") e fica feio em título de display. */
+  h1, h2, h3 { overflow-wrap: break-word; }
+
+  /* --- Espaçamento: paddings de desktop sufocam o celular --- */
+  .p-12 { padding: 1.25rem !important; }
+  .p-10 { padding: 1.15rem !important; }
+  .p-8  { padding: 1.05rem !important; }
+  .px-12, .px-10 { padding-left: 1.15rem !important; padding-right: 1.15rem !important; }
+  .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .py-16 { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
+  .gap-8 { gap: 1rem !important; }
+  .gap-10, .gap-12 { gap: 1.25rem !important; }
+
+  /* --- Layout: seção de slide sempre alcançável pelo topo ---
+     min-h-screen + justify-center clipa o topo quando o conteúdo é
+     maior que a tela. No celular, ancora no topo e deixa rolar. */
+  .min-h-screen {
+    min-height: 100dvh !important;
+    height: auto !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+  .min-h-screen.justify-center,
+  .min-h-screen.items-center { justify-content: flex-start !important; }
+
+  /* --- Grids/flex de 2+ colunas empilham (redundante ao md: do
+         Tailwind, mas cobre grids sem breakpoint declarado). --- */
+  .grid-cols-2, .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr !important; }
+
+  /* --- Palco de animação (D3/SVG/canvas): nunca estoura a largura,
+         mantém proporção e encolhe a altura. --- */
+  .anim-stage {
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+    min-height: 0 !important;
+  }
+
+  /* --- Tabelas: fonte menor + rolagem horizontal se precisar. --- */
+  table { font-size: 0.82rem !important; }
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+  /* --- Controles flutuantes respeitam a safe-area do iPhone. --- */
+  #mira-next, #next-card {
+    bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+    right: max(1rem, env(safe-area-inset-right)) !important;
+    width: 44px !important; height: 44px !important;
+  }
+}
+/* @MIRA:RESPONSIVE:END */
+</style>
+</head>
+
+<body>
+    <!-- Controles de slide: barra de progresso + botão flutuante "próximo" -->
+    <div id="mira-progress"></div>
+    <button id="mira-next" aria-label="Próximo slide">
+        <i data-lucide="chevron-down" class="w-6 h-6" id="mira-next-icon"></i>
+    </button>
+
+    <!-- ============ SLIDE 1: CAPA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6">
+        <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover" style="opacity: 0.5;">
+            <source src="header-bg.mp4" type="video/mp4">
+        </video>
+        <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0.55) 40%, rgba(0,0,0,0.85));"></div>
+        <div class="relative z-10 text-center max-w-4xl" data-aos="fade-up">
+            <p class="attribute-pill inline-block px-5 py-2 text-sm tracking-widest uppercase text-soft mb-8">Escola de Governo · Toledo-PR</p>
+            <h1 class="text-5xl md:text-6xl font-black leading-tight mb-6">
+                Qual é a sua<br>
+                <span class="primary-color">pergunta</span>?
+            </h1>
+            <p class="text-xl text-soft max-w-2xl mx-auto mb-10">Aula 7 de 10. Onze ferramentas do QGIS, cada uma responde a uma pergunta sobre o território.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-10">
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">7ª</p>
+                    <p class="text-softer text-sm mt-1">de 10 aulas</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">11</p>
+                    <p class="text-softer text-sm mt-1">ferramentas</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">4</p>
+                    <p class="text-softer text-sm mt-1">já vistas na aula 6</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">500 m</p>
+                    <p class="text-softer text-sm mt-1">de buffer na prática</p>
+                </div>
+            </div>
+            <div class="flex items-center justify-center gap-3 text-softer text-sm">
+                <i data-lucide="users" class="w-4 h-4 primary-color"></i> Romano e Valdecir
+                <span class="opacity-40">|</span>
+                <i data-lucide="calendar" class="w-4 h-4 primary-color"></i> 20/10/2026
+            </div>
+            <img src="logo.png" alt="Escola de Governo, Município de Toledo-PR" class="h-16 mx-auto mt-10 opacity-90">
+        </div>
+        <style>
+            .capa-stat { animation: capa-stat-glow 6s ease-in-out infinite; }
+            .capa-stat:nth-child(2) { animation-delay: 1.5s; }
+            .capa-stat:nth-child(3) { animation-delay: 3s; }
+            .capa-stat:nth-child(4) { animation-delay: 4.5s; }
+            @keyframes capa-stat-glow {
+                0%, 70%, 100% { border-color: var(--mira-card-border); box-shadow: 0 10px 30px var(--mira-glow-soft); }
+                15% { border-color: var(--mira-icon-border); box-shadow: 0 10px 40px var(--mira-glow-strong); }
+            }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 2 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="list-checks" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">4 de 9</span> vocês já sabem usar</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Vetor &gt; Ferramentas de Geoprocessamento, item por item</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-02')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-02" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Interseção ∩</span>
+            <span class="attribute-pill px-5 py-2 text-sm">União ∪</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Diferença −</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Diferença simétrica △</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 3 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="combine" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">E</span> e <span class="primary-color">OU</span> agora têm botão</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Cobertura das escolas cruzada com um micropolo</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-03')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-03" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Interseção: onde há atendimento duplo</span>
+            <span class="attribute-pill px-5 py-2 text-sm">União: tudo, em pedaços</span>
+            <span class="attribute-pill px-5 py-2 text-sm">A ordem não importa</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 4 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="git-compare" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">MAS NÃO</span>: a ordem decide</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Diferença tira, diferença simétrica mostra o que mudou</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-04')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-04" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Diferença: entrada menos sobreposição</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Simétrica: o que mudou entre versões</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 5 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="circle-dot" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">Buffer</span>: até onde chega?</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Ponto vira círculo, linha vira faixa, polígono engorda</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-05')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-05" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Raio de cobertura</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Faixa não edificável</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Distância mínima</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 6 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="triangle-alert" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">500 graus</span> dá a volta na Terra</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Medir em graus não dá erro: dá número errado</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-06')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-06" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">EPSG:4674 guarda (graus)</span>
+            <span class="attribute-pill px-5 py-2 text-sm">EPSG:31982 mede (metros)</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 7: CTA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="glass-card w-full max-w-5xl p-8 md:p-10 relative" data-aos="zoom-in">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <div class="slide-title-row flex items-center gap-4 mb-4">
+                        <div class="icon-hero"><i data-lucide="move-right" class="primary-color w-6 h-6"></i></div>
+                        <h2 class="text-3xl md:text-4xl font-black">Reprojete <span class="primary-color">antes</span> de medir</h2>
+                    </div>
+                    <p class="text-soft text-lg mb-6">Um passo antes de qualquer buffer ou cálculo de área.</p>
+                    <ol class="space-y-3 text-lg">
+                        <li><span class="primary-color font-black">1.</span> Botão direito na camada</li>
+                        <li><span class="primary-color font-black">2.</span> Exportar &gt; Salvar feições como</li>
+                        <li><span class="primary-color font-black">3.</span> SRC: <span class="primary-color font-bold">EPSG:31982</span></li>
+                    </ol>
+                </div>
+                <div class="anim-stage relative" style="height: clamp(220px, 32vh, 300px);">
+                    <button class="replay-btn" onclick="window.miraReplay('st-07')">↻ replay</button>
+                    <svg id="st-07" preserveAspectRatio="xMidYMid meet"></svg>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 8 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="scissors" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">Recortar</span>: a tesoura com molde</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Só fica o que está dentro, com os atributos de quem entrou</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-08')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-08" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Recortar: atributos só da entrada</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Interseção: atributos das duas</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 9 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="pentagon" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">Envoltória</span>: o elástico nos pregos</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">O menor polígono convexo que abraça todos os pontos</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-09')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-09" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Área de abrangência aproximada</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Em forma côncava, exagera</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 10 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="square-dashed" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">Poligonizar</span>: linha fechada vira área</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Vetor &gt; Ferramentas de Geometria &gt; Poligonizar</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-10')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-10" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Quadras a partir de eixos</span>
+            <span class="attribute-pill px-5 py-2 text-sm">DWG/DXF do acervo</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Sem snapping, não fecha</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 11 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="layers" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">Dissolver</span>: some a fronteira de dentro</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Bairros agrupados pela região administrativa</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-11')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-11" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Com campo: um polígono por valor</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Sem campo: um polígono só</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Os outros atributos se perdem</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 12 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="eraser" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">Eliminar</span>: a lasca vai para o vizinho</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Limpa o resto fino que sobra de interseção e união</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-12')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-12" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Precisa de seleção antes</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Maior área</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Maior fronteira comum</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 13 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="map-pin" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black"><span class="primary-color">Junção espacial</span>: quantos caem em cada?</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Une pela posição, não pelo código</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-13')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-13" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Unir atributos por localização (resumo)</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Intersecta, contém, está dentro</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 14 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="languages" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Da pergunta para o <span class="primary-color">botão</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Seis perguntas que a prefeitura faz toda semana</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-14')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-14" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 15 ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="flag" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Quem fica <span class="primary-color">sem escola</span>?</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Mini-desafio: quatro passos, uma resposta no mapa</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-15')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-15" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 16: ENCERRAMENTO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-16">
+        <div class="relative z-10 text-center max-w-4xl" data-aos="zoom-in">
+            <div class="icon-hero mx-auto mb-8" style="width:72px;height:72px;border-radius:20px;">
+                <i data-lucide="quote" class="primary-color w-9 h-9"></i>
+            </div>
+            <h2 class="text-5xl md:text-6xl font-black mb-8">Obrigado</h2>
+            <blockquote class="text-2xl md:text-3xl text-soft leading-snug mb-12">
+                "Toda ferramenta responde a uma <span class="primary-color font-bold">pergunta</span>. Comece por ela."
+            </blockquote>
+            <div class="flex flex-wrap items-center justify-center gap-3 mb-10">
+                <span class="attribute-pill check-pill px-5 py-2">Buffer</span>
+                <span class="attribute-pill check-pill px-5 py-2">Recortar</span>
+                <span class="attribute-pill check-pill px-5 py-2">Dissolver</span>
+                <span class="attribute-pill check-pill px-5 py-2">Junção espacial</span>
+            </div>
+            <img src="logo.png" alt="Escola de Governo, Município de Toledo-PR" class="h-14 mx-auto opacity-90">
+        </div>
+        <style>
+            .check-pill { animation: check-on 8s ease-in-out infinite; }
+            .check-pill:nth-child(2) { animation-delay: 2s; }
+            .check-pill:nth-child(3) { animation-delay: 4s; }
+            .check-pill:nth-child(4) { animation-delay: 6s; }
+            @keyframes check-on { 0%, 25%, 100% { color: var(--mira-text-soft); border-color: var(--mira-pill-border); } 8% { color: var(--mira-primary); border-color: var(--mira-icon-border); background: var(--mira-icon-bg); } }
+        </style>
+    </section>
+
+    <script>
+        AOS.init({ duration: 800, once: true });
+        lucide.createIcons();
+
+(function () {
+    'use strict';
+
+    function cor(nome, reserva) {
+        var v = getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+        return v || reserva;
+    }
+    var COR = {
+        marca: cor('--mira-primary', '#FF904D'),
+        acento: cor('--mira-accent-2', '#FFC766'),
+        tinta: cor('--mira-text', '#ffffff'),
+        fundo: cor('--mira-bg', '#000000')
+    };
+
+    /* ---------- regente ---------- */
+    function reger(svgId, quadro) {
+        var svg = document.getElementById(svgId);
+        var slide = svg && svg.closest('section');
+        if (!slide || typeof IntersectionObserver !== 'function') {
+            d3.timer(function (ms) { quadro(ms); });
+            return;
+        }
+        var relogio = null, visivel = false, ultimoZero = false;
+        window.__miraReplay = window.__miraReplay || {};
+        window.__miraReplay[svgId] = function () { relogio = null; };   // botão replay: recomeça do zero
+        d3.timer(function (ms) {
+            if (!visivel) {
+                /* fora da tela: desenha o quadro zero UMA vez e para de gastar */
+                if (!ultimoZero) { quadro(0); ultimoZero = true; }
+                return;
+            }
+            ultimoZero = false;
+            if (relogio === null) relogio = ms;
+            quadro(ms - relogio);
+        });
+        new IntersectionObserver(function (entradas) {
+            entradas.forEach(function (e) {
+                if (e.isIntersecting === visivel) return;
+                visivel = e.isIntersecting;
+                relogio = null;
+                ultimoZero = false;
+            });
+        }, { threshold: 0.4 }).observe(slide);
+    }
+
+    /* ---------- palco: o quadro inteiro, menos a faixa do título ---------- */
+    function palco(svgId) {
+        var svg = d3.select('#' + svgId);
+        if (svg.empty()) return null;
+        var caixa = svg.node().closest('.anim-stage');
+        var secao = caixa && caixa.closest ? caixa.closest('section') : null;
+        var titulo = secao && secao.querySelector
+            ? secao.querySelector('.slide-main h2, .slide-main h1')
+            : null;
+        var sub = secao && secao.querySelector ? secao.querySelector('.slide-main p.sub') : null;
+        var RESPIRO = 18;
+        var F = { W: 960, H: 460, topo: 0, alturaUtil: 460 };
+        F.vy = function (k) { return F.topo + F.alturaUtil * k; };
+
+        function casar() {
+            var r = caixa.getBoundingClientRect();
+            if (r.width > 0 && r.height > 0) F.H = Math.round(F.W * r.height / r.width);
+            svg.attr('viewBox', '0 0 ' + F.W + ' ' + F.H);
+            F.topo = 0;
+            if (titulo && titulo.getBoundingClientRect && r.height > 0) {
+                var t = titulo.getBoundingClientRect();
+                var basePx = Math.max(0, (t.bottom || 0) - (r.top || 0));
+                if (sub) {
+                    var s2 = sub.getBoundingClientRect();
+                    basePx = Math.max(basePx, (s2.bottom || 0) - (r.top || 0));
+                }
+                F.topo = Math.round(F.H * basePx / r.height) + RESPIRO;
+                F.topo = Math.min(F.topo, Math.round(F.H * 0.40));
+            }
+            F.alturaUtil = F.H - F.topo;
+        }
+        casar();
+        window.addEventListener('resize', casar);
+        window.addEventListener('load', casar);
+        svg.selectAll('*').remove();
+        return { svg: svg, F: F };
+    }
+
+    /* ---------- utilidades ---------- */
+    function seg(t, a, b) { return t <= a ? 0 : t >= b ? 1 : (t - a) / (b - a); }
+    var eio = d3.easeSinInOut;
+    function mix(a, b, k) { return a + (b - a) * k; }
+    function texto(pai, tam, peso, fill) {
+        return pai.append('text').attr('text-anchor', 'middle')
+            .attr('font-size', tam).attr('font-weight', peso).attr('fill', fill)
+            .attr('font-family', 'Inter, sans-serif');
+    }
+    function geo(F, kR, ky) {
+        return { cx: F.W / 2, cy: F.vy(ky), R: Math.min(F.alturaUtil * kR, F.W * .16) };
+    }
+
+
+    /* ---------- utilidades da aula 07 ---------- */
+    function ciclo(t, ini, per) { if (t < ini) return -1; var c = (t - ini) / per; return c - Math.floor(c); }
+    function onda(t, per) { return .5 - .5 * Math.cos(2 * Math.PI * t / per); }
+    function plato(s, a, b, r) { r = r || .5; return Math.min(seg(s, a, a + r), 1 - seg(s, b - r, b)); }
+    function caminho(pts) { return 'M' + pts.map(function (q) { return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join('L') + 'Z'; }
+    function escala(pts, cx, cy, s) { return pts.map(function (q) { return [cx + q[0] * s, cy + q[1] * s]; }); }
+
+    /* ---------- 2: o menu do QGIS, quatro itens já conhecidos ---------- */
+    function animMenu(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var itens = [['Buffer', ''], ['Recortar', ''], ['Envoltória convexa', ''], ['Diferença', '−'],
+            ['Dissolver', ''], ['Interseção', '∩'], ['Diferença simétrica', '△'], ['União', '∪'],
+            ['Eliminar polígonos selecionados', '']];
+        var ordemConj = [5, 7, 3, 6];
+        var cab = texto(g, 14, 700, COR.tinta).attr('letter-spacing', 2).attr('opacity', .55)
+            .text('VETOR  >  FERRAMENTAS DE GEOPROCESSAMENTO');
+        var linhas = itens.map(function (it) {
+            var l = g.append('g');
+            var conj = !!it[1];
+            return {
+                l: l, conj: conj,
+                fundo: l.append('rect').attr('rx', 8).attr('fill', COR.marca),
+                nome: texto(l, 19, 600, COR.tinta).attr('text-anchor', 'start').text(it[0] + '...'),
+                tag: texto(l, conj ? 24 : 13, 800, COR.marca).attr('letter-spacing', conj ? 0 : 1.5).text(conj ? it[1] : 'HOJE')
+            };
+        });
+        reger(id, function (ms) {
+            var t = ms / 1000;
+            var lh = Math.min((F.H - 50) / 9.4, 44), w = Math.min(620, F.W - 80), x0 = (F.W - w) / 2;
+            var topo = (F.H - lh * 9 - 30) / 2 + 30;
+            cab.attr('x', F.W / 2).attr('y', topo - 14).attr('opacity', .55 * seg(t, 0, .5));
+            var u = ciclo(t, 2, 10), s = u < 0 ? -1 : u * 10;
+            linhas.forEach(function (r, i) {
+                var e = eio(seg(t, .1 * i, .1 * i + .6));
+                var y = topo + lh * (i + .5);
+                var h = 0;
+                if (s >= 0 && s < 5.2 && r.conj) {
+                    var k = Math.floor(s / 1.3);
+                    if (ordemConj[k] === i) h = Math.sin(Math.PI * ((s % 1.3) / 1.3));
+                }
+                if (s >= 5.5 && s < 9.5 && !r.conj) h = plato(s, 5.5, 9.5, .6) * (.75 + .25 * onda(s, 1));
+                r.l.attr('opacity', e).attr('transform', 'translate(' + (-30 * (1 - e)) + ',0)');
+                r.fundo.attr('x', x0).attr('y', y - lh * .42).attr('width', w).attr('height', lh * .84)
+                    .attr('opacity', .05 + .3 * h);
+                r.nome.attr('x', x0 + 20).attr('y', y + 7);
+                r.tag.attr('x', x0 + w - 44).attr('y', y + (r.conj ? 8 : 5))
+                    .attr('opacity', r.conj ? (s < 0 ? seg(t, 1.2, 2) : .55 + .45 * h) : h);
+            });
+        });
+    }
+
+    /* ---------- 3: interseção e união com camadas ---------- */
+    function animIntUni(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, svg = p.svg, defs = svg.append('defs'), g = svg.append('g');
+        var clip = defs.append('clipPath').attr('id', id + '-mp').append('path');
+        var esc = [[-1.0, -.25], [0, .45], [1.0, -.3]];
+        var poli = [[-1.6, .25], [-.7, -.8], [.5, -.55], [1.5, .1], [.8, .9], [-.6, .8]];
+        var gU = g.append('g');
+        var uPoli = gU.append('path').attr('fill', COR.marca);
+        var uC = esc.map(function () { return gU.append('circle').attr('fill', COR.marca); });
+        var gI = g.append('g').attr('clip-path', 'url(#' + id + '-mp)');
+        var iC = esc.map(function () { return gI.append('circle').attr('fill', COR.marca); });
+        var oPoli = g.append('path').attr('fill', 'none').attr('stroke', COR.tinta).attr('stroke-width', 2.5).attr('stroke-opacity', .75);
+        var oC = esc.map(function () { return g.append('circle').attr('fill', 'none').attr('stroke', COR.acento).attr('stroke-width', 2.5).attr('stroke-dasharray', '7 5'); });
+        var pt = esc.map(function () { return g.append('circle').attr('r', 5).attr('fill', COR.tinta); });
+        var rot1 = texto(g, 14, 700, COR.acento).text('cobertura das escolas');
+        var rot2 = texto(g, 14, 700, COR.tinta).attr('opacity', .75).attr('text-anchor', 'end').text('micropolo');
+        var legI = texto(g, 19, 700, COR.tinta), legU = texto(g, 19, 700, COR.tinta);
+        legI.text('Interseção: só onde escola e micropolo se encontram');
+        legU.text('União: tudo junto, cortado onde se sobrepõe');
+        reger(id, function (ms) {
+            var t = ms / 1000, cx = F.W / 2, cy = F.H * .44, s = Math.min(F.H * .3, 140), r = .62 * s;
+            var e = eio(seg(t, 0, 1.2));
+            var u = ciclo(t, 1.6, 9), q = u < 0 ? -1 : u * 9;
+            var kI = q < 0 ? 0 : plato(q, 0, 4.5, .7), kU = q < 0 ? 0 : plato(q, 4.5, 9, .7);
+            var d = caminho(escala(poli, cx, cy, s));
+            clip.attr('d', d); uPoli.attr('d', d); oPoli.attr('d', d).attr('opacity', e);
+            gU.attr('opacity', .5 * kU); gI.attr('opacity', .85 * kI);
+            esc.forEach(function (c, i) {
+                var x = cx + c[0] * s, y = cy + c[1] * s;
+                [uC[i], iC[i], oC[i]].forEach(function (el) { el.attr('cx', x).attr('cy', y).attr('r', r * e); });
+                pt[i].attr('cx', x).attr('cy', y).attr('opacity', e);
+            });
+            rot1.attr('x', cx + 1.0 * s).attr('y', cy - .3 * s - r - 10).attr('opacity', e);
+            rot2.attr('x', cx - 1.68 * s).attr('y', cy + .3 * s).attr('opacity', .75 * e);
+            legI.attr('x', cx).attr('y', F.H - 14).attr('opacity', kI);
+            legU.attr('x', cx).attr('y', F.H - 14).attr('opacity', kU);
+        });
+    }
+
+    /* ---------- 4: diferença e diferença simétrica ---------- */
+    function animDiferencas(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, svg = p.svg, defs = svg.append('defs'), g = svg.append('g');
+        var INF = 4000;
+        var m = defs.append('mask').attr('id', id + '-m').attr('maskUnits', 'userSpaceOnUse')
+            .attr('x', -INF).attr('y', -INF).attr('width', 3 * INF).attr('height', 3 * INF);
+        m.append('rect').attr('x', -INF).attr('y', -INF).attr('width', 3 * INF).attr('height', 3 * INF).attr('fill', '#fff');
+        var mC = m.append('circle').attr('fill', '#000');
+        var bairro = [[-1.3, -1], [1.1, -1.1], [1.4, .9], [-1.1, 1.1]];
+        var fB = g.append('path').attr('fill', COR.marca).attr('mask', 'url(#' + id + '-m)');
+        var oB = g.append('path').attr('fill', 'none').attr('stroke', COR.tinta).attr('stroke-width', 2.5).attr('stroke-opacity', .7);
+        var oC = g.append('circle').attr('fill', 'none').attr('stroke', COR.acento).attr('stroke-width', 2.5).attr('stroke-dasharray', '7 5');
+        var xor = g.append('path').attr('fill', COR.marca).attr('fill-rule', 'evenodd');
+        var oVelho = g.append('path').attr('fill', 'none').attr('stroke', COR.tinta).attr('stroke-width', 2.5).attr('stroke-opacity', .6).attr('stroke-dasharray', '6 5');
+        var oNovo = g.append('path').attr('fill', 'none').attr('stroke', COR.acento).attr('stroke-width', 2.5);
+        var t1 = texto(g, 22, 800, COR.marca).text('Diferença');
+        var t2 = texto(g, 22, 800, COR.marca).text('Diferença simétrica');
+        var c1 = texto(g, 15, 600, COR.tinta).attr('opacity', .8).text('bairro − cobertura = sem atendimento');
+        var c2 = texto(g, 15, 600, COR.tinta).attr('opacity', .8).text('limite antigo △ limite novo = o que mudou');
+        reger(id, function (ms) {
+            var t = ms / 1000, s = Math.min(F.H * .25, 105), cy = F.H * .5;
+            var lx = F.W * .26, rx = F.W * .74;
+            var e = eio(seg(t, 0, 1.2)), f = seg(t, 1, 2), mv = seg(t, 1.5, 3);
+            var ccx = lx + Math.sin((t - 1.5) * .8) * s * .8 * mv, rr = .8 * s;
+            mC.attr('cx', ccx).attr('cy', cy).attr('r', rr);
+            fB.attr('d', caminho(escala(bairro, lx, cy, s))).attr('opacity', .85 * f);
+            oB.attr('d', caminho(escala(bairro, lx, cy, s))).attr('opacity', e);
+            oC.attr('cx', ccx).attr('cy', cy).attr('r', rr * e);
+            var w = Math.sin((t - 1.5) * .9) * mv;
+            var velho = [[-1.2, -1], [1.2, -1], [1.2, 1], [-1.2, 1]];
+            var novo = [[-1.0, -1.25 + .2 * w], [1.35 + .2 * w, -.8], [1.0 - .3 * w, 1.15], [-1.35, .75 - .25 * w]];
+            var dV = caminho(escala(velho, rx, cy, s)), dN = caminho(escala(novo, rx, cy, s));
+            xor.attr('d', dV + dN).attr('opacity', .85 * f);
+            oVelho.attr('d', dV).attr('opacity', e); oNovo.attr('d', dN).attr('opacity', e);
+            t1.attr('x', lx).attr('y', 30).attr('opacity', e); t2.attr('x', rx).attr('y', 30).attr('opacity', e);
+            c1.attr('x', lx).attr('y', F.H - 14).attr('opacity', .8 * f); c2.attr('x', rx).attr('y', F.H - 14).attr('opacity', .8 * f);
+        });
+    }
+
+    /* ---------- 5: buffer em ponto, linha, polígono e dissolvido ---------- */
+    function animBuffer(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var linha = [[-.9, .6], [-.2, -.3], [.4, .2], [.9, -.6]];
+        var poli = [[-.7, -.5], [.6, -.6], [.7, .4], [-.4, .6]];
+        function lin(pts) { return 'M' + pts.map(function (q) { return q[0] + ',' + q[1]; }).join('L'); }
+        // ponto
+        var c1 = g.append('circle').attr('fill', COR.marca).attr('fill-opacity', .35).attr('stroke', COR.marca).attr('stroke-width', 2.5);
+        var anel = g.append('circle').attr('fill', 'none').attr('stroke', COR.marca).attr('stroke-width', 2);
+        var raio = g.append('line').attr('stroke', COR.tinta).attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
+        var rotR = texto(g, 13, 700, COR.tinta).text('500 m');
+        var p1 = g.append('circle').attr('r', 5).attr('fill', COR.tinta);
+        // linha
+        var gL = g.append('g').attr('opacity', .35);
+        var bL = gL.append('path').attr('fill', 'none').attr('stroke', COR.marca).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+        var l2 = g.append('path').attr('fill', 'none').attr('stroke', COR.tinta).attr('stroke-width', 3);
+        // polígono
+        var gP = g.append('g').attr('opacity', .35);
+        var bP = gP.append('path').attr('fill', COR.marca).attr('stroke', COR.marca).attr('stroke-linejoin', 'round');
+        var p3 = g.append('path').attr('fill', 'none').attr('stroke', COR.tinta).attr('stroke-width', 2.5);
+        // dissolver
+        var gD = g.append('g');
+        var dCont = [0, 1].map(function () { return gD.append('circle').attr('fill', 'none').attr('stroke', COR.marca).attr('stroke-width', 2.5); });
+        var dTapa = [0, 1].map(function () { return gD.append('circle').attr('fill', COR.fundo); });
+        var gDF = gD.append('g').attr('opacity', .35);
+        var dFill = [0, 1].map(function () { return gDF.append('circle').attr('fill', COR.marca); });
+        var dCruz = [0, 1].map(function () { return gD.append('circle').attr('fill', 'none').attr('stroke', COR.marca).attr('stroke-width', 2.5); });
+        var dPt = [0, 1].map(function () { return gD.append('circle').attr('r', 5).attr('fill', COR.tinta); });
+        var rot = ['Ponto vira círculo', 'Linha vira faixa', 'Polígono engorda'].map(function (s) { return texto(g, 16, 700, COR.tinta).text(s); });
+        var rotSem = texto(g, 16, 700, COR.tinta).text('Sem dissolver');
+        var rotCom = texto(g, 16, 700, COR.marca).text('Dissolver resultado');
+        reger(id, function (ms) {
+            var t = ms / 1000, cy = F.H * .45, R = Math.min(F.H * .14, 54);
+            var xs = [.13, .37, .62, .86].map(function (k) { return F.W * k; });
+            var e = eio(seg(t, 0, .6)), r = R * eio(seg(t, .6, 2));
+            var u = ciclo(t, 2, 2.4), br = .85 + .15 * onda(t, 3);
+            c1.attr('cx', xs[0]).attr('cy', cy).attr('r', r);
+            anel.attr('cx', xs[0]).attr('cy', cy).attr('r', r + 22 * Math.max(u, 0)).attr('opacity', u < 0 ? 0 : 1 - u);
+            p1.attr('cx', xs[0]).attr('cy', cy).attr('opacity', e);
+            raio.attr('x1', xs[0]).attr('y1', cy).attr('x2', xs[0] + r).attr('y2', cy).attr('opacity', seg(t, 1.8, 2.3));
+            rotR.attr('x', xs[0] + r / 2).attr('y', cy - 8).attr('opacity', seg(t, 1.8, 2.3));
+            var ptsL = linha.map(function (q) { return [xs[1] + q[0] * R * .9, cy + q[1] * R * .9]; });
+            bL.attr('d', lin(ptsL)).attr('stroke-width', 2 * r); gL.attr('opacity', .35 * br);
+            l2.attr('d', lin(ptsL)).attr('opacity', e);
+            var ptsP = escala(poli, xs[2], cy, R * .75);
+            bP.attr('d', caminho(ptsP)).attr('stroke-width', 2 * r); gP.attr('opacity', .35 * br);
+            p3.attr('d', caminho(ptsP)).attr('opacity', e);
+            var sD = ciclo(t, 2.5, 6), kSem = sD < 0 ? 1 : plato(sD * 6, 0, 3, .5);
+            [-.48, .48].forEach(function (dx, i) {
+                var x = xs[3] + dx * R, rr = r * .85;
+                dCont[i].attr('cx', x).attr('cy', cy).attr('r', rr);
+                dTapa[i].attr('cx', x).attr('cy', cy).attr('r', Math.max(rr - 1.25, 0));
+                dFill[i].attr('cx', x).attr('cy', cy).attr('r', rr);
+                dCruz[i].attr('cx', x).attr('cy', cy).attr('r', rr).attr('opacity', kSem);
+                dPt[i].attr('cx', x).attr('cy', cy).attr('opacity', e);
+            });
+            var yR = cy + R * 1.95;
+            rot.forEach(function (tx, i) { tx.attr('x', xs[i]).attr('y', yR).attr('opacity', seg(t, .8 + .3 * i, 1.4 + .3 * i)); });
+            rotSem.attr('x', xs[3]).attr('y', yR).attr('opacity', seg(t, 1.7, 2.3) * seg(kSem, .5, 1));
+            rotCom.attr('x', xs[3]).attr('y', yR).attr('opacity', seg(t, 1.7, 2.3) * seg(1 - kSem, .5, 1));
+        });
+    }
+
+    /* ---------- 6: 500 graus contra 500 metros ---------- */
+    function animGraus(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, svg = p.svg, defs = svg.append('defs'), g = svg.append('g');
+        var clipE = defs.append('clipPath').attr('id', id + '-e').append('rect').attr('rx', 12);
+        var clipD = defs.append('clipPath').attr('id', id + '-d').append('rect').attr('rx', 12);
+        var gE = g.append('g').attr('clip-path', 'url(#' + id + '-e)');
+        var gDi = g.append('g').attr('clip-path', 'url(#' + id + '-d)');
+        function malha(pai) {
+            return d3.range(14).map(function () { return pai.append('line').attr('stroke', COR.tinta).attr('stroke-opacity', .12).attr('stroke-width', 1.5); });
+        }
+        var mE = malha(gE), mD = malha(gDi);
+        var cE = gE.append('circle').attr('fill', COR.marca).attr('fill-opacity', .3).attr('stroke', COR.marca).attr('stroke-width', 3);
+        var cD = gDi.append('circle').attr('fill', COR.marca).attr('fill-opacity', .3).attr('stroke', COR.marca).attr('stroke-width', 3);
+        var aD = gDi.append('circle').attr('fill', 'none').attr('stroke', COR.marca).attr('stroke-width', 2);
+        var pE = gE.append('circle').attr('r', 6).attr('fill', COR.tinta);
+        var pD = gDi.append('circle').attr('r', 6).attr('fill', COR.tinta);
+        var bE = g.append('rect').attr('rx', 12).attr('fill', 'none').attr('stroke', COR.tinta).attr('stroke-opacity', .3);
+        var bD = g.append('rect').attr('rx', 12).attr('fill', 'none').attr('stroke', COR.marca).attr('stroke-opacity', .6);
+        var tE = texto(g, 20, 800, COR.tinta).text('EPSG:4674 · graus');
+        var tD = texto(g, 20, 800, COR.marca).text('EPSG:31982 · metros');
+        var kmE = texto(g, 26, 900, COR.marca);
+        var aviso = texto(g, 17, 700, COR.tinta).text('o círculo saiu do mapa');
+        var capE = texto(g, 15, 600, COR.tinta).attr('opacity', .8).text('buffer 500 = 500 graus ≈ 55.500 km de raio');
+        var capD = texto(g, 15, 600, COR.tinta).attr('opacity', .8).text('buffer 500 = 500 metros em volta da escola');
+        reger(id, function (ms) {
+            var t = ms / 1000, top = 46, bot = F.H - 36, h = bot - top;
+            var wP = F.W / 2 - 45, xE = 30, xD = F.W / 2 + 15;
+            [[clipE, bE, xE], [clipD, bD, xD]].forEach(function (a) {
+                a[0].attr('x', a[2]).attr('y', top).attr('width', wP).attr('height', h);
+                a[1].attr('x', a[2]).attr('y', top).attr('width', wP).attr('height', h);
+            });
+            [[mE, xE], [mD, xD]].forEach(function (a) {
+                a[0].forEach(function (l, i) {
+                    if (i < 7) { var x = a[1] + wP * (i + .5) / 7; l.attr('x1', x).attr('x2', x + 12).attr('y1', top).attr('y2', bot); }
+                    else { var y = top + h * (i - 6.5) / 7; l.attr('x1', a[1]).attr('x2', a[1] + wP).attr('y1', y).attr('y2', y - 8); }
+                });
+            });
+            var e = eio(seg(t, 0, .8)), cyM = top + h / 2;
+            var u = ciclo(t, .8, 5.5), k = u < 0 ? 0 : d3.easeCubicIn(seg(u, 0, .65)), fade = u < 0 ? 1 : 1 - seg(u, .88, 1);
+            cE.attr('cx', xE + wP / 2).attr('cy', cyM).attr('r', 8 + wP * 2 * k).attr('opacity', fade);
+            pE.attr('cx', xE + wP / 2).attr('cy', cyM).attr('opacity', e);
+            kmE.attr('x', xE + wP / 2).attr('y', bot - 18).attr('opacity', e * fade)
+                .text('raio: ' + Math.round(55500 * k).toLocaleString('pt-BR') + ' km');
+            aviso.attr('x', xE + wP / 2).attr('y', top + 28).attr('opacity', u < 0 ? 0 : seg(u, .6, .7) * fade * (.6 + .4 * onda(t, .8)));
+            var rD = Math.min(h * .2, 55) * eio(seg(t, .8, 1.8)), uD = ciclo(t, 2, 2.4);
+            cD.attr('cx', xD + wP / 2).attr('cy', cyM).attr('r', rD);
+            aD.attr('cx', xD + wP / 2).attr('cy', cyM).attr('r', rD + 20 * Math.max(uD, 0)).attr('opacity', uD < 0 ? 0 : 1 - uD);
+            pD.attr('cx', xD + wP / 2).attr('cy', cyM).attr('opacity', e);
+            tE.attr('x', xE + wP / 2).attr('y', 30).attr('opacity', e); tD.attr('x', xD + wP / 2).attr('y', 30).attr('opacity', e);
+            capE.attr('x', xE + wP / 2).attr('y', F.H - 10).attr('opacity', .8 * e); capD.attr('x', xD + wP / 2).attr('y', F.H - 10).attr('opacity', .8 * e);
+        });
+    }
+
+    /* ---------- 7: o selo do SRC troca de 4674 para 31982 ---------- */
+    function animSelo(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var selo = g.append('g');
+        var caixa = selo.append('rect').attr('rx', 36).attr('stroke-width', 6);
+        var cod = texto(selo, 110, 900, COR.tinta);
+        var uni = texto(selo, 44, 700, COR.tinta);
+        var seta = texto(g, 36, 700, COR.tinta).attr('opacity', .7).text('antes de medir, troque o SRC');
+        reger(id, function (ms) {
+            var t = ms / 1000, cx = F.W / 2, cy = F.H * .48, w = F.W * .78, h = F.H * .56;
+            var e = eio(seg(t, 0, .8)), s = ciclo(t, 1, 5), q = s < 0 ? 0 : s * 5;
+            var k = q < 2.5 ? seg(q, 1.8, 2.3) : 1 + seg(q, 4.3, 4.8);
+            var metros = k > .5 && k < 1.5;
+            var sy = Math.max(Math.abs(Math.cos(Math.PI * k)), .02);
+            selo.attr('transform', 'translate(' + cx + ',' + cy + ') scale(' + e + ',' + (e * sy) + ')');
+            caixa.attr('x', -w / 2).attr('y', -h / 2).attr('width', w).attr('height', h)
+                .attr('fill', metros ? COR.marca : 'none').attr('fill-opacity', .15)
+                .attr('stroke', metros ? COR.marca : COR.tinta).attr('stroke-opacity', metros ? 1 : .4);
+            cod.attr('x', 0).attr('y', 18).attr('fill', metros ? COR.marca : COR.tinta).text(metros ? 'EPSG:31982' : 'EPSG:4674');
+            uni.attr('x', 0).attr('y', 90).attr('opacity', .8).text(metros ? 'metros' : 'graus');
+            seta.attr('x', cx).attr('y', F.H - 20).attr('opacity', .7 * e);
+        });
+    }
+
+    /* ---------- 8: recortar com molde, e a diferença nos atributos ---------- */
+    function animRecortar(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, svg = p.svg, defs = svg.append('defs'), g = svg.append('g');
+        var clip = defs.append('clipPath').attr('id', id + '-b').append('path');
+        var ruas = [[.02, .1, .58, .14], [.02, .32, .58, .3], [.02, .52, .58, .56], [.02, .74, .58, .72], [.02, .92, .58, .9],
+            [.08, .04, .1, .98], [.2, .04, .18, .98], [.32, .04, .34, .98], [.44, .04, .42, .98], [.55, .04, .56, .98], [.04, .9, .5, .06]];
+        var gA = g.append('g'), gB = g.append('g').attr('clip-path', 'url(#' + id + '-b)');
+        var rA = ruas.map(function () { return gA.append('line').attr('stroke', COR.tinta).attr('stroke-width', 3).attr('stroke-linecap', 'round'); });
+        var rB = ruas.map(function () { return gB.append('line').attr('stroke', COR.marca).attr('stroke-width', 3.5).attr('stroke-linecap', 'round'); });
+        var molde = g.append('path').attr('fill', COR.marca).attr('fill-opacity', .08).attr('stroke', COR.acento).attr('stroke-width', 3).attr('stroke-dasharray', '9 6');
+        var rotM = texto(g, 14, 700, COR.acento).text('limite do bairro');
+        function tabela(nome, cols, quentes) {
+            var gt = g.append('g');
+            var tt = texto(gt, 17, 800, COR.tinta).attr('text-anchor', 'start').text(nome);
+            var cel = cols.map(function (c, i) {
+                var q = quentes.indexOf(i) >= 0;
+                return {
+                    r: gt.append('rect').attr('rx', 4).attr('fill', q ? COR.marca : COR.tinta).attr('fill-opacity', q ? .25 : .1)
+                        .attr('stroke', q ? COR.marca : COR.tinta).attr('stroke-opacity', .4),
+                    t: texto(gt, 13, 700, q ? COR.marca : COR.tinta).text(c),
+                    linhas: d3.range(3).map(function () { return gt.append('rect').attr('fill', COR.tinta).attr('fill-opacity', .06); })
+                };
+            });
+            return { g: gt, tt: tt, cel: cel };
+        }
+        var tab1 = tabela('Recortar', ['rua', 'tipo'], []);
+        var tab2 = tabela('Interseção', ['rua', 'tipo', 'bairro', 'região'], [2, 3]);
+        reger(id, function (ms) {
+            var t = ms / 1000, x0 = 20, w = F.W * .58, y0 = 14, h = F.H - 28;
+            ruas.forEach(function (r, i) {
+                [rA[i], rB[i]].forEach(function (l) { l.attr('x1', x0 + r[0] / .6 * w).attr('y1', y0 + r[1] * h).attr('x2', x0 + r[2] / .6 * w).attr('y2', y0 + r[3] * h); });
+            });
+            var b = [[.18, .2], [.62, .14], [.8, .45], [.7, .82], [.3, .86], [.12, .55]].map(function (q) { return [x0 + q[0] * w, y0 + q[1] * h]; });
+            var u = ciclo(t, 0, 10), s = u * 10;
+            var desce = eio(seg(s, .3, 1.8)), corte = seg(s, 2, 3) * (1 - seg(s, 8.5, 9.6)), some = 1 - seg(s, 8, 9.2);
+            clip.attr('d', caminho(b));
+            molde.attr('d', caminho(b)).attr('transform', 'translate(0,' + (-F.H * (1 - desce)) + ')').attr('opacity', desce * some);
+            rotM.attr('x', b[1][0]).attr('y', b[1][1] - 10).attr('opacity', seg(s, 1.8, 2.3) * some);
+            gA.attr('opacity', .55 - .45 * corte); gB.attr('opacity', corte);
+            var tx = F.W * .65, tw = F.W * .32;
+            [[tab1, 2, F.H * .14], [tab2, 4, F.H * .55]].forEach(function (a, j) {
+                var tb = a[0], n = a[1], ty = a[2], cw = tw / 4;
+                var k = seg(s, 3 + j * .5, 3.8 + j * .5);
+                tb.g.attr('opacity', k);
+                tb.tt.attr('x', tx).attr('y', ty);
+                tb.cel.forEach(function (c, i) {
+                    var x = tx + i * cw;
+                    c.r.attr('x', x).attr('y', ty + 10).attr('width', cw - 4).attr('height', 26);
+                    c.t.attr('x', x + (cw - 4) / 2).attr('y', ty + 28);
+                    c.linhas.forEach(function (l, li) { l.attr('x', x).attr('y', ty + 40 + li * 18).attr('width', cw - 4).attr('height', 14); });
+                });
+            });
+        });
+    }
+
+    /* ---------- 9: envoltória convexa, o elástico nos pregos ---------- */
+    function animEnvoltoria(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var N = 26, cache = { n: -1 };
+        var area = g.append('path').attr('fill', COR.marca).attr('stroke', COR.marca).attr('stroke-width', 3).attr('stroke-linejoin', 'round');
+        var dots = d3.range(N).map(function () { return g.append('circle').attr('r', 5.5).attr('fill', COR.tinta); });
+        var leg = texto(g, 17, 700, COR.tinta).text('o elástico também cerca o vazio');
+        function pontos(n, cx, cy, R) {
+            var rng = d3.randomLcg(n * 7 + 3), giro = n * .9, pts = [];
+            for (var i = 0; i < N; i++) {
+                var a = giro + (40 + rng() * 280) * Math.PI / 180, rr = R * (.55 + .45 * rng());
+                pts.push([cx + Math.cos(a) * rr * 1.35, cy + Math.sin(a) * rr]);
+            }
+            return pts;
+        }
+        reger(id, function (ms) {
+            var t = ms / 1000, cx = F.W / 2, cy = F.H * .46, R = Math.min(F.H * .36, 170);
+            var n = Math.floor(t / 10), u = t - n * 10;
+            if (cache.n !== n || cache.cx !== cx || cache.R !== R) {
+                var pts = pontos(n, cx, cy, R);
+                cache = { n: n, cx: cx, R: R, pts: pts, hull: d3.polygonHull(pts) };
+            }
+            var fora = 1 - seg(u, 9, 10), k = eio(seg(u, 1.2, 3.2));
+            cache.pts.forEach(function (q, i) {
+                dots[i].attr('cx', q[0]).attr('cy', q[1]).attr('opacity', seg(u, .03 * i, .03 * i + .4) * fora);
+            });
+            var elastico = cache.hull.map(function (q) {
+                var a = Math.atan2(q[1] - cy, q[0] - cx), big = R * 1.6;
+                return [mix(cx + Math.cos(a) * big * 1.35, q[0], k), mix(cy + Math.sin(a) * big, q[1], k)];
+            });
+            area.attr('d', caminho(elastico)).attr('stroke-opacity', seg(u, 1, 1.4) * fora)
+                .attr('fill-opacity', (u > 3.2 ? .1 + .14 * onda(u - 3.2, 2) : .05) * fora);
+            leg.attr('x', cx).attr('y', F.H - 12).attr('opacity', seg(u, 4, 4.6) * fora);
+        });
+    }
+
+    /* ---------- 10: poligonizar, anel fechado vira quadra ---------- */
+    function animPoligonizar(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var gF = g.append('g'), gL = g.append('g');
+        var cel = d3.range(6).map(function () { return gF.append('rect').attr('fill', COR.marca); });
+        var segs = [];
+        function novoSeg() { var s = gL.append('path').attr('fill', 'none').attr('stroke', COR.tinta).attr('stroke-width', 3.5).attr('stroke-linecap', 'round').attr('pathLength', 1).attr('stroke-dasharray', '1 1'); segs.push(s); return s; }
+        for (var i = 0; i < 18; i++) novoSeg();
+        var furo = g.append('circle').attr('fill', 'none').attr('stroke', COR.acento).attr('stroke-width', 2.5);
+        var aviso = texto(g, 16, 800, COR.acento).text('não fechou');
+        var leg = texto(g, 17, 700, COR.tinta).text('Cada anel fechado vira uma quadra');
+        reger(id, function (ms) {
+            var t = ms / 1000;
+            var xs = [.2, .4, .6, .8].map(function (k) { return F.W * k; }), ys = [.08, .42, .76].map(function (k) { return F.H * k; });
+            var mid = (ys[1] + ys[2]) / 2, gap = 16, L = [];
+            ys.forEach(function (y) { for (var c = 0; c < 3; c++) L.push([xs[c], y, xs[c + 1], y]); });
+            xs.forEach(function (x, xi) {
+                L.push([x, ys[0], x, ys[1]]);
+                if (xi === 3) { L.push([x, ys[1], x, mid - gap]); L.push([x, mid + gap, x, ys[2]]); }
+                else L.push([x, ys[1], x, ys[2]]);
+            });
+            var u = ciclo(t, 0, 11), s = u * 11, volta = seg(s, 9.6, 10.8);
+            L.forEach(function (l, i) {
+                var k = eio(seg(s, .1 * i, .1 * i + .7)) * (1 - volta);
+                segs[i].attr('d', 'M' + l[0] + ',' + l[1] + 'L' + l[2] + ',' + l[3]).attr('stroke-dashoffset', 1 - k);
+            });
+            var fechadas = [0, 1, 2, 3, 4];
+            cel.forEach(function (r, i) {
+                var c = i % 3, rr = Math.floor(i / 3), aberta = (c === 2 && rr === 1);
+                var k = aberta ? 0 : seg(s, 2.6 + .4 * fechadas.indexOf(i), 3.2 + .4 * fechadas.indexOf(i)) * (1 - seg(s, 9, 9.8));
+                r.attr('x', xs[c] + 4).attr('y', ys[rr] + 4).attr('width', xs[c + 1] - xs[c] - 8).attr('height', ys[rr + 1] - ys[rr] - 8)
+                    .attr('opacity', .55 * k);
+            });
+            var av = seg(s, 5, 5.5) * (1 - seg(s, 9, 9.8));
+            furo.attr('cx', xs[3]).attr('cy', mid).attr('r', gap + 6 + 4 * onda(s, 1)).attr('opacity', av);
+            aviso.attr('x', (xs[2] + xs[3]) / 2).attr('y', mid + 6).attr('opacity', av * (.6 + .4 * onda(s, 1)));
+            leg.attr('x', F.W / 2).attr('y', F.H - 10).attr('opacity', seg(s, 4, 4.6) * (1 - seg(s, 9, 9.8)));
+        });
+    }
+
+    /* ---------- 11: dissolver por região, depois sem campo ---------- */
+    function animDissolver(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var REG = [[0, 0, 1, 1, 2, 2], [0, 0, 0, 1, 2, 2], [0, 1, 1, 1, 1, 2]];
+        var corReg = [COR.marca, COR.acento, COR.tinta], opReg = [.8, .7, .35];
+        var gC = g.append('g'), gB = g.append('g');
+        var cel = [], bord = [];
+        REG.forEach(function (lin, r) { lin.forEach(function (rg, c) { cel.push({ r: r, c: c, rg: rg, el: gC.append('rect') }); }); });
+        REG.forEach(function (lin, r) {
+            lin.forEach(function (rg, c) {
+                if (c < 5) bord.push({ v: 1, r: r, c: c, mesma: rg === lin[c + 1], el: gB.append('line') });
+                if (r < 2) bord.push({ v: 0, r: r, c: c, mesma: rg === REG[r + 1][c], el: gB.append('line') });
+            });
+        });
+        bord.forEach(function (b) { b.el.attr('stroke', COR.fundo).attr('stroke-width', 4); });
+        var contorno = g.append('rect').attr('fill', 'none').attr('stroke', COR.tinta).attr('stroke-opacity', .5).attr('stroke-width', 2);
+        var leg = texto(g, 20, 800, COR.tinta);
+        reger(id, function (ms) {
+            var t = ms / 1000, x0 = F.W * .12, x1 = F.W * .88, y0 = F.H * .06, y1 = F.H * .8;
+            var cw = (x1 - x0) / 6, ch = (y1 - y0) / 3;
+            var u = ciclo(t, 0, 12), s = u * 12;
+            var kA = seg(s, 2, 3.5) * (1 - seg(s, 10.5, 12)), kB = seg(s, 7, 8.5) * (1 - seg(s, 10.5, 12));
+            cel.forEach(function (o, i) {
+                var e = t < 12 ? seg(t, .04 * i, .04 * i + .5) : 1;
+                var base = d3.interpolateRgb(COR.fundo, corReg[o.rg])(opReg[o.rg]), alvo = d3.interpolateRgb(COR.fundo, COR.marca)(.8);
+                o.el.attr('x', x0 + o.c * cw - .5).attr('y', y0 + o.r * ch - .5).attr('width', cw + 1).attr('height', ch + 1)
+                    .attr('fill', d3.interpolateRgb(base, alvo)(kB)).attr('opacity', e);
+            });
+            bord.forEach(function (b) {
+                var x = x0 + (b.c + b.v) * cw, y = y0 + (b.r + (b.v ? 0 : 1)) * ch;
+                b.el.attr('x1', x).attr('y1', y).attr('x2', b.v ? x : x + cw).attr('y2', b.v ? y + ch : y)
+                    .attr('opacity', b.mesma ? 1 - kA : 1 - kB);
+            });
+            contorno.attr('x', x0).attr('y', y0).attr('width', x1 - x0).attr('height', y1 - y0);
+            var txt = s < 3 ? '18 bairros' : s < 8 ? '3 regiões · campo: região' : '1 polígono · sem campo';
+            if (s >= 10.8) txt = '18 bairros';
+            leg.attr('x', F.W / 2).attr('y', F.H - 12).text(txt).attr('opacity', seg(t, .5, 1));
+        });
+    }
+
+    /* ---------- 12: eliminar, a lasca vai para o vizinho ---------- */
+    function animEliminar(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var corA = d3.interpolateRgb(COR.fundo, COR.marca)(.55);
+        var pA = g.append('path').attr('fill', corA).attr('stroke', corA).attr('stroke-width', 1);
+        var pB = g.append('path').attr('fill', d3.interpolateRgb(COR.fundo, COR.tinta)(.22));
+        var pL = g.append('path');
+        var b1 = g.append('line').attr('stroke', COR.fundo).attr('stroke-width', 3);
+        var b2 = g.append('line').attr('stroke', COR.fundo).attr('stroke-width', 3);
+        var sel = g.append('path').attr('fill', 'none').attr('stroke', COR.acento).attr('stroke-width', 2.5).attr('stroke-dasharray', '6 4');
+        var tA = texto(g, 24, 900, COR.tinta).text('A'), tB = texto(g, 24, 900, COR.tinta).text('B');
+        var sA = texto(g, 14, 600, COR.tinta).attr('opacity', .75).text('maior área'), sB = texto(g, 14, 600, COR.tinta).attr('opacity', .75).text('menor área');
+        var tL = texto(g, 15, 800, COR.acento).text('lasca selecionada');
+        var leg = texto(g, 18, 700, COR.marca).text('a lasca foi para A: maior área');
+        reger(id, function (ms) {
+            var t = ms / 1000, yT = F.H * .12, yB = F.H * .78, xa = F.W * .12, xb = F.W * .82;
+            var l1t = F.W * .47, l1b = F.W * .5, d = 14;
+            var A = [[xa, yT], [l1t, yT], [l1b, yB], [xa, yB]];
+            var Lc = [[l1t, yT], [l1t + d, yT], [l1b + d, yB], [l1b, yB]];
+            var B = [[l1t + d, yT], [xb, yT], [xb, yB], [l1b + d, yB]];
+            var u = ciclo(t, 0, 9), s = u * 9;
+            var selK = plato(s, 1, 3.4, .3), abs = seg(s, 3.2, 4.6) * (1 - seg(s, 8.2, 9));
+            var ent = t < 9 ? seg(s, 0, .8) : 1;
+            pA.attr('d', caminho(A)).attr('opacity', ent); pB.attr('d', caminho(B)).attr('opacity', ent);
+            pL.attr('d', caminho(Lc)).attr('fill', d3.interpolateRgb(COR.acento, corA)(abs)).attr('opacity', ent);
+            b1.attr('x1', l1t).attr('y1', yT).attr('x2', l1b).attr('y2', yB).attr('opacity', ent * (1 - abs));
+            b2.attr('x1', l1t + d).attr('y1', yT).attr('x2', l1b + d).attr('y2', yB).attr('opacity', ent);
+            sel.attr('d', caminho(Lc)).attr('opacity', selK * (.4 + .6 * onda(s, .6)));
+            tA.attr('x', (xa + l1t) / 2).attr('y', (yT + yB) / 2).attr('opacity', ent);
+            tB.attr('x', (l1t + d + xb) / 2).attr('y', (yT + yB) / 2).attr('opacity', ent);
+            sA.attr('x', (xa + l1t) / 2).attr('y', (yT + yB) / 2 + 24).attr('opacity', .75 * ent);
+            sB.attr('x', (l1t + d + xb) / 2).attr('y', (yT + yB) / 2 + 24).attr('opacity', .75 * ent);
+            tL.attr('x', l1t + d / 2).attr('y', yT - 12).attr('opacity', selK);
+            leg.attr('x', F.W / 2).attr('y', F.H - 14).attr('opacity', seg(s, 4.6, 5.2) * (1 - seg(s, 8.2, 9)));
+        });
+    }
+
+    /* ---------- 13: junção espacial, contar pontos por bairro ---------- */
+    function animJuncao(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var N = 40, cache = { n: -1 };
+        var gB = g.append('g'), gP = g.append('g'), gT = g.append('g');
+        var bair = d3.range(6).map(function (i) {
+            return {
+                r: gB.append('rect').attr('rx', 6).attr('fill', COR.marca).attr('stroke', COR.tinta).attr('stroke-opacity', .35),
+                n: texto(gT, 13, 700, COR.tinta).attr('opacity', .7).attr('text-anchor', 'start').text('Bairro ' + 'ABCDEF'[i]),
+                c: texto(gT, 34, 900, COR.tinta)
+            };
+        });
+        var pts = d3.range(N).map(function () { return gP.append('circle').attr('r', 5).attr('fill', COR.tinta); });
+        reger(id, function (ms) {
+            var t = ms / 1000, x0 = F.W * .1, x1 = F.W * .9, y0 = F.H * .06, y1 = F.H * .94;
+            var cw = (x1 - x0) / 3, ch = (y1 - y0) / 2;
+            var n = Math.floor(t / 10), u = t - n * 10;
+            if (cache.n !== n || cache.x0 !== x0 || cache.y1 !== y1) {
+                var rng = d3.randomLcg(n * 13 + 5), lista = [];
+                var peso = [.3, .08, .17, .12, .25, .08];
+                for (var i = 0; i < N; i++) {
+                    var a = rng(), b = 0, acc = 0;
+                    for (b = 0; b < 6; b++) { acc += peso[(b + n) % 6]; if (a <= acc) break; }
+                    b = Math.min(b, 5);
+                    var cc = b % 3, rr = Math.floor(b / 3);
+                    lista.push({ b: b, x: x0 + cc * cw + 18 + rng() * (cw - 36), y: y0 + rr * ch + 30 + rng() * (ch - 48) });
+                }
+                cache = { n: n, x0: x0, y1: y1, lista: lista };
+            }
+            var fora = 1 - seg(u, 8.8, 10), cont = [0, 0, 0, 0, 0, 0];
+            cache.lista.forEach(function (q, i) {
+                var ti = .4 + i * .1, k = d3.easeQuadIn(seg(u, ti, ti + .45));
+                pts[i].attr('cx', q.x).attr('cy', mix(y0 - 30, q.y, k)).attr('opacity', (k > 0 ? 1 : 0) * fora);
+                if (k >= 1) cont[q.b]++;
+            });
+            var ent = t < 10 ? seg(t, 0, .6) : 1;
+            bair.forEach(function (o, i) {
+                var cc = i % 3, rr = Math.floor(i / 3), x = x0 + cc * cw, y = y0 + rr * ch;
+                o.r.attr('x', x + 3).attr('y', y + 3).attr('width', cw - 6).attr('height', ch - 6)
+                    .attr('fill-opacity', (.05 + .07 * cont[i]) * fora + .05 * (1 - fora)).attr('opacity', ent);
+                o.n.attr('x', x + 14).attr('y', y + 22).attr('opacity', .7 * ent);
+                o.c.attr('x', x + cw / 2).attr('y', y + ch / 2 + 12).text(cont[i]).attr('opacity', seg(u, .5, 1) * fora);
+            });
+        });
+    }
+
+    /* ---------- 14: dicionário, da pergunta para o botão ---------- */
+    function animDicionario(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var pares = [['Até onde a escola atende?', 'Buffer'], ['Só o que está dentro do bairro?', 'Recortar'],
+            ['Como fica por região?', 'Dissolver'], ['Que área esses pontos ocupam?', 'Envoltória convexa'],
+            ['Quantas ocorrências por bairro?', 'Junção espacial'], ['O que ficou sem cobertura?', 'Diferença']];
+        var linhas = pares.map(function (pr) {
+            var l = g.append('g');
+            return {
+                l: l,
+                f: l.append('rect').attr('rx', 8).attr('fill', COR.marca),
+                q: texto(l, 20, 600, COR.tinta).attr('text-anchor', 'start').text(pr[0]),
+                s: l.append('path').attr('fill', 'none').attr('stroke', COR.marca).attr('stroke-width', 2.5).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round'),
+                r: texto(l, 21, 800, COR.marca).attr('text-anchor', 'start').text(pr[1])
+            };
+        });
+        reger(id, function (ms) {
+            var t = ms / 1000, lh = Math.min(F.H / 6.6, 64), y0 = (F.H - lh * 6) / 2;
+            var xq = 50, xs = F.W * .6, xr = F.W * .66;
+            var u = ciclo(t, 2.4, 9), s = u < 0 ? -1 : u * 9;
+            linhas.forEach(function (o, i) {
+                var e = eio(seg(t, .15 * i, .15 * i + .6)), y = y0 + lh * (i + .5);
+                var h = s < 0 ? 0 : (Math.floor(s / 1.5) === i ? Math.sin(Math.PI * (s % 1.5) / 1.5) : 0);
+                o.l.attr('opacity', e).attr('transform', 'translate(0,' + (12 * (1 - e)) + ')');
+                o.f.attr('x', 30).attr('y', y - lh * .42).attr('width', F.W - 60).attr('height', lh * .84).attr('opacity', .04 + .2 * h);
+                o.q.attr('x', xq).attr('y', y + 7).attr('opacity', .75 + .25 * h);
+                o.s.attr('d', 'M' + (xs - 18) + ',' + y + 'L' + (xs + 18) + ',' + y + 'M' + (xs + 9) + ',' + (y - 8) + 'L' + (xs + 18) + ',' + y + 'L' + (xs + 9) + ',' + (y + 8))
+                    .attr('opacity', .5 + .5 * h).attr('transform', 'translate(' + (6 * h) + ',0)');
+                o.r.attr('x', xr).attr('y', y + 7).attr('opacity', .6 + .4 * h);
+            });
+        });
+    }
+
+    /* ---------- 15: mini-desafio, a cadeia de quatro passos ---------- */
+    function animDesafio(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var passos = [['Reprojetar', 'para 31982'], ['Buffer 500 m', 'dissolvido'], ['Diferença', 'com os bairros'], ['Mapa', 'dos descobertos']];
+        var ligas = d3.range(3).map(function () {
+            return { b: g.append('line').attr('stroke', COR.tinta).attr('stroke-opacity', .25).attr('stroke-width', 4),
+                c: g.append('line').attr('stroke', COR.marca).attr('stroke-width', 4) };
+        });
+        var nos = passos.map(function (ps, i) {
+            return {
+                c: g.append('circle').attr('stroke-width', 3),
+                n: texto(g, 26, 900, COR.tinta).text(i + 1),
+                a: texto(g, 18, 800, COR.tinta).text(ps[0]),
+                b: texto(g, 15, 600, COR.tinta).attr('opacity', .75).text(ps[1])
+            };
+        });
+        var perg = texto(g, 20, 800, COR.marca).text('Quais bairros nenhum buffer de 500 m alcança?');
+        reger(id, function (ms) {
+            var t = ms / 1000, cy = F.H * .38, r = Math.min(F.H * .09, 36);
+            var xs = [0, 1, 2, 3].map(function (i) { return F.W * (.14 + i * .24); });
+            var u = ciclo(t, 0, 12), s = u * 12, volta = seg(s, 10.6, 11.6);
+            ligas.forEach(function (l, i) {
+                var k = seg(s, 1.4 + 1.5 * i, 2.2 + 1.5 * i) * (1 - volta);
+                l.b.attr('x1', xs[i] + r).attr('x2', xs[i + 1] - r).attr('y1', cy).attr('y2', cy);
+                l.c.attr('x1', xs[i] + r).attr('x2', mix(xs[i] + r, xs[i + 1] - r, k)).attr('y1', cy).attr('y2', cy).attr('opacity', k > 0 ? 1 : 0);
+            });
+            nos.forEach(function (o, i) {
+                var aceso = seg(s, .6 + 1.5 * i, 1.1 + 1.5 * i) * (1 - volta);
+                var e = t < 12 ? seg(t, .1 * i, .1 * i + .5) : 1;
+                o.c.attr('cx', xs[i]).attr('cy', cy).attr('r', r * (1 + .08 * aceso * onda(s, 1.6)))
+                    .attr('fill', COR.marca).attr('fill-opacity', aceso)
+                    .attr('stroke', aceso > .5 ? COR.marca : COR.tinta).attr('stroke-opacity', aceso > .5 ? 1 : .4).attr('opacity', e);
+                o.n.attr('x', xs[i]).attr('y', cy + 9).attr('fill', aceso > .5 ? COR.fundo : COR.tinta).attr('opacity', e);
+                o.a.attr('x', xs[i]).attr('y', cy + r + 32).attr('opacity', e * (.6 + .4 * aceso));
+                o.b.attr('x', xs[i]).attr('y', cy + r + 54).attr('opacity', e * .75);
+            });
+            perg.attr('x', F.W / 2).attr('y', F.H * .9).attr('opacity', seg(s, 7, 7.6) * (1 - volta) * (.7 + .3 * onda(s, 1.8)));
+        });
+    }
+
+    window.miraReplay = function (id) { var f = window.__miraReplay && window.__miraReplay[id]; if (f) f(); };
+
+    function ligar() {
+        animMenu('st-02');
+        animIntUni('st-03');
+        animDiferencas('st-04');
+        animBuffer('st-05');
+        animGraus('st-06');
+        animSelo('st-07');
+        animRecortar('st-08');
+        animEnvoltoria('st-09');
+        animPoligonizar('st-10');
+        animDissolver('st-11');
+        animEliminar('st-12');
+        animJuncao('st-13');
+        animDicionario('st-14');
+        animDesafio('st-15');
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ligar);
+    else ligar();
+})();
+
+
+        // === CONTROLES DE SLIDE: navegação card-a-card (progresso + botão + teclado) ===
+        (function () {
+            const cardSections = Array.from(document.querySelectorAll('body > section'));
+            if (cardSections.length === 0) return;
+
+            const progress = document.getElementById('mira-progress');
+            const nextBtn = document.getElementById('mira-next');
+            const nextIcon = document.getElementById('mira-next-icon');
+
+            const atBottom = () =>
+                (window.scrollY + window.innerHeight) >= (document.documentElement.scrollHeight - 100);
+
+            function currentIndex() {
+                const y = window.scrollY + window.innerHeight * 0.3;
+                let idx = -1;
+                for (let i = 0; i < cardSections.length; i++) {
+                    if (cardSections[i].offsetTop <= y) idx = i;
+                }
+                return idx;
+            }
+
+            function goTo(i) {
+                const idx = Math.max(0, Math.min(cardSections.length - 1, i));
+                cardSections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            window.addEventListener('scroll', () => {
+                const docH = document.documentElement.scrollHeight - window.innerHeight;
+                progress.style.width = (docH > 0 ? (window.scrollY / docH) * 100 : 0) + '%';
+                nextBtn.classList.toggle('visible', window.scrollY > 300);
+                nextIcon.setAttribute('data-lucide', atBottom() ? 'chevron-up' : 'chevron-down');
+                lucide.createIcons();
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (atBottom()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+                goTo(currentIndex() + 1);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key)) {
+                    e.preventDefault();
+                    goTo(currentIndex() + 1);
+                } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+                    e.preventDefault();
+                    const idx = currentIndex();
+                    if (idx <= 0) window.scrollTo({ top: 0, behavior: 'smooth' });
+                    else goTo(idx - 1);
+                } else if (e.key === 'Home') {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (e.key === 'End') {
+                    e.preventDefault();
+                    goTo(cardSections.length - 1);
+                } else if (e.key.toLowerCase() === 'f') {
+                    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                    else document.exitFullscreen();
+                }
+            });
+        })();
+    </script>
+
+    <!-- Modo edição (reordenar slides): tecla E ou ?edit=1 -->
+    <script src="mira/mira-edit.js" defer></script>
+    <!-- Edição livre estilo Canva (mover/redimensionar/rotacionar/duplicar/excluir/texto): tecla E -->
+    <script src="mira/mira-edit-free.js" defer></script>
+    <!-- mira-draw (desenhar sobre o slide): tecla P ou ?draw=1 -->
+    <script src="mira/mira-draw.js" defer></script>
+</body>
+
+</html>
