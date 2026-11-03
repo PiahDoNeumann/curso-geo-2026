@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+<!-- ==========================================================
+     ESCOLA-GOVERNO · template do Curso de Geoprocessamento,
+     Escola de Governo de Toledo-PR
+     ----------------------------------------------------------
+     Casca extraída da aula 06: capa com vídeo (header-bg.mp4),
+     pílula "Escola de Governo · Toledo-PR", logo (logo.png) na
+     capa e no encerramento, slides de conteúdo em glass-card com
+     animação D3 em loop, navegação por setas, modos E e P.
+     Para criar um slide novo, duplique o SLIDE 2 e troque o id
+     do svg (st-NN) e a chamada em ligar().
+     ========================================================== -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Aula 9 · Da informação à decisão</title>
+    <script src="assets/vendor/tailwind.js"></script>
+    <link href="assets/vendor/aos.css" rel="stylesheet">
+    <script src="assets/vendor/aos.js"></script>
+    <script src="assets/vendor/lucide.js"></script>
+    <script src="assets/vendor/d3.v7.min.js"></script>
+    <link href="assets/vendor/inter.css" rel="stylesheet">
+    <style>
+        /* @MIRA:THEME:START */
+/* MIRA THEME: mira-dark (padrão)
+   Identidade clássica do canal: fundo preto, laranja vibrante,
+   glassmorphism no estilo clássico do canal. */
+:root {
+    --mira-primary: #FF904D;
+    --mira-crop: #35D07F;
+    --mira-bg: #000000;
+    --mira-text: #ffffff;
+    --mira-text-soft: rgba(255, 255, 255, 0.70);
+    --mira-text-softer: rgba(255, 255, 255, 0.50);
+    --mira-card-bg: rgba(255, 255, 255, 0.05);
+    --mira-card-border: rgba(255, 255, 255, 0.10);
+    --mira-glow-soft: rgba(255, 144, 77, 0.15);
+    --mira-glow-strong: rgba(255, 144, 77, 0.25);
+    --mira-icon-bg: rgba(255, 144, 77, 0.15);
+    --mira-icon-border: rgba(255, 144, 77, 0.30);
+    --mira-pill-bg: rgba(255, 255, 255, 0.04);
+    --mira-pill-border: rgba(255, 255, 255, 0.08);
+    --mira-stage-glow: rgba(255, 144, 77, 0.06);
+    --mira-accent-2: #FFC766;
+}
+
+
+/* ============================================================
+   MIRA — base.css
+   Estrutura compartilhada por todos os temas.
+   Os temas definem apenas as CSS variables (--mira-*).
+   ============================================================ */
+
+body {
+    background: var(--mira-bg);
+    min-height: 100vh;
+    color: var(--mira-text);
+    font-family: 'Inter', sans-serif;
+}
+
+.primary-color { color: var(--mira-primary); }
+.primary-bg { background: var(--mira-primary); }
+
+.glass-card {
+    background: var(--mira-card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--mira-card-border);
+    box-shadow: 0 10px 30px var(--mira-glow-soft);
+    transition: all 0.3s ease;
+    border-radius: 0.75rem;
+}
+
+.glass-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px var(--mira-glow-strong);
+}
+
+.icon-hero {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    background: var(--mira-icon-bg);
+    border: 1px solid var(--mira-icon-border);
+}
+
+.attribute-pill {
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    transition: all 0.25s ease;
+    border-radius: 9999px;
+}
+
+.attribute-pill:hover {
+    background: var(--mira-icon-bg);
+    border-color: var(--mira-icon-border);
+    transform: translateY(-3px);
+}
+
+/* Palco de animação D3 — tamanho padrão do canvas */
+.anim-stage {
+    width: 100%;
+    height: clamp(400px, 60vh, 620px);
+    background: radial-gradient(circle at 50% 50%, var(--mira-stage-glow), transparent 70%);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.anim-stage svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.replay-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: var(--mira-pill-bg);
+    border: 1px solid var(--mira-pill-border);
+    color: var(--mira-text-soft);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.replay-btn:hover {
+    background: var(--mira-icon-bg);
+    color: var(--mira-primary);
+}
+
+.text-soft { color: var(--mira-text-soft); }
+.text-softer { color: var(--mira-text-softer); }
+
+@keyframes mira-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+@keyframes mira-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes mira-gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* @MIRA:THEME:END */
+
+        /* Cor de erro do deck (derivada do padrão Mira #FF6464) */
+        :root { --mira-error: #FF6464; --mira-error-bg: rgba(255, 100, 100, 0.15); --mira-error-border: rgba(255, 100, 100, 0.35); }
+
+        /* Diretriz de titulo da capa (CLAUDE.md): quebra equilibrada so no primeiro slide */
+        body > section:first-of-type h1,
+        body > section:first-of-type h2 { text-wrap: balance; }
+
+        /* === CONTROLES DE SLIDE (passagem card-a-card) === */
+        html { scroll-behavior: smooth; }
+        /* Scroll discreto (padrao Mira): a navegacao e por teclado/botao e o
+           progresso ja aparece na barra do topo; a scrollbar fica quase invisivel. */
+        html { scrollbar-width: thin; scrollbar-color: #2e2e2e #0d0d0d; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; background: #0d0d0d; }
+        ::-webkit-scrollbar-track { background: #0d0d0d; }
+        ::-webkit-scrollbar-thumb { background: #2e2e2e; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+        ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+
+        #mira-progress {
+            position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+            background: linear-gradient(90deg, var(--mira-primary), var(--mira-accent-2), var(--mira-primary));
+            background-size: 200% 100%;
+            animation: mira-shimmer 2s linear infinite;
+            z-index: 9999; transition: width 0.1s linear;
+            box-shadow: 0 0 10px var(--mira-glow-strong);
+        }
+
+        @keyframes mira-shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+
+        #mira-next {
+            position: fixed; bottom: 32px; right: 32px;
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--mira-primary); color: var(--mira-bg);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: none;
+            opacity: 0; transform: translateY(20px);
+            transition: all 0.3s ease; z-index: 9998;
+            box-shadow: 0 4px 20px var(--mira-glow-strong);
+        }
+        #mira-next.visible { opacity: 1; transform: translateY(0); }
+        #mira-next:hover { transform: translateY(-3px) scale(1.1); }
+    
+/* @MIRA:RESPONSIVE:START */
+/* ============================================================
+   MIRA — responsive.css  (camada de reflow mobile-first)
+   Objetivo: TODO slide 16:9 do Mira vira legível no celular em
+   retrato SEM arquivo mobile separado. O mesmo deck se reorganiza:
+   fontes encolhem, grids empilham, padding reduz, palcos escalam.
+
+   Estratégia: os decks nascem "desktop-first" (classes Tailwind com
+   tamanhos fixos: text-6xl, p-10, ...). Esta camada sobrescreve essas
+   classes abaixo de 640px. Usa !important de propósito — precisa
+   vencer o Tailwind CDN (injetado em runtime) em decks legados sem
+   reescrever o HTML. Os clamps têm teto ~= valor desktop, então em
+   telas largas nada muda; só encolhem no estreito.
+   ============================================================ */
+
+/* Guarda universal contra overflow horizontal (o "print cortado" no zap). */
+html, body { max-width: 100%; overflow-x: hidden; }
+img, svg, video, canvas, iframe, table, pre { max-width: 100%; }
+
+@media (max-width: 640px) {
+
+  /* --- Tipografia fluida: encolhe títulos gigantes no celular --- */
+  .text-9xl { font-size: clamp(3rem, 12vw, 5rem)      !important; line-height: 1.05 !important; }
+  .text-8xl { font-size: clamp(2.75rem, 11vw, 4.5rem) !important; line-height: 1.06 !important; }
+  .text-7xl { font-size: clamp(2.25rem, 10vw, 3.75rem)!important; line-height: 1.08 !important; }
+  .text-6xl { font-size: clamp(2rem, 9vw, 3rem)       !important; line-height: 1.1  !important; }
+  .text-5xl { font-size: clamp(1.75rem, 8vw, 2.5rem)  !important; line-height: 1.12 !important; }
+  .text-4xl { font-size: clamp(1.5rem, 7vw, 2rem)     !important; line-height: 1.15 !important; }
+  .text-3xl { font-size: clamp(1.35rem, 6vw, 1.75rem) !important; line-height: 1.2  !important; }
+  .text-2xl { font-size: clamp(1.2rem, 5vw, 1.5rem)   !important; line-height: 1.25 !important; }
+  .text-xl  { font-size: clamp(1.05rem, 4.5vw, 1.25rem)!important; line-height: 1.3 !important; }
+
+  /* Títulos: quebram entre palavras; só partem uma palavra se ela sozinha
+     estourar a largura. Sem hyphens:auto — em PT ele hifena no meio
+     ("pode-rosas") e fica feio em título de display. */
+  h1, h2, h3 { overflow-wrap: break-word; }
+
+  /* --- Espaçamento: paddings de desktop sufocam o celular --- */
+  .p-12 { padding: 1.25rem !important; }
+  .p-10 { padding: 1.15rem !important; }
+  .p-8  { padding: 1.05rem !important; }
+  .px-12, .px-10 { padding-left: 1.15rem !important; padding-right: 1.15rem !important; }
+  .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .py-16 { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
+  .gap-8 { gap: 1rem !important; }
+  .gap-10, .gap-12 { gap: 1.25rem !important; }
+
+  /* --- Layout: seção de slide sempre alcançável pelo topo ---
+     min-h-screen + justify-center clipa o topo quando o conteúdo é
+     maior que a tela. No celular, ancora no topo e deixa rolar. */
+  .min-h-screen {
+    min-height: 100dvh !important;
+    height: auto !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+  .min-h-screen.justify-center,
+  .min-h-screen.items-center { justify-content: flex-start !important; }
+
+  /* --- Grids/flex de 2+ colunas empilham (redundante ao md: do
+         Tailwind, mas cobre grids sem breakpoint declarado). --- */
+  .grid-cols-2, .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr !important; }
+
+  /* --- Palco de animação (D3/SVG/canvas): nunca estoura a largura,
+         mantém proporção e encolhe a altura. --- */
+  .anim-stage {
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+    min-height: 0 !important;
+  }
+
+  /* --- Tabelas: fonte menor + rolagem horizontal se precisar. --- */
+  table { font-size: 0.82rem !important; }
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+  /* --- Controles flutuantes respeitam a safe-area do iPhone. --- */
+  #mira-next, #next-card {
+    bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+    right: max(1rem, env(safe-area-inset-right)) !important;
+    width: 44px !important; height: 44px !important;
+  }
+}
+/* @MIRA:RESPONSIVE:END */
+</style>
+</head>
+
+<body>
+    <!-- Controles de slide: barra de progresso + botão flutuante "próximo" -->
+    <div id="mira-progress"></div>
+    <button id="mira-next" aria-label="Próximo slide">
+        <i data-lucide="chevron-down" class="w-6 h-6" id="mira-next-icon"></i>
+    </button>
+
+    <!-- ============ SLIDE 1: CAPA ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6">
+        <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover" style="opacity: 0.5;">
+            <source src="header-bg.mp4" type="video/mp4">
+        </video>
+        <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0.55) 40%, rgba(0,0,0,0.85));"></div>
+        <div class="relative z-10 text-center max-w-4xl" data-aos="fade-up">
+            <p class="attribute-pill inline-block px-5 py-2 text-sm tracking-widest uppercase text-soft mb-8">Escola de Governo · Toledo-PR</p>
+            <h1 class="text-5xl md:text-6xl font-black leading-tight mb-6">
+                Da informação à<br>
+                <span class="primary-color">decisão</span>
+            </h1>
+            <p class="text-xl text-soft max-w-2xl mx-auto mb-10">Aula 9 de 10. Começar pela pergunta, encadear as ferramentas e publicar sem expor ninguém.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mb-10">
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">9ª</p>
+                    <p class="text-softer text-sm mt-1">de 10 aulas</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">6</p>
+                    <p class="text-softer text-sm mt-1">etapas do fluxo</p>
+                </div>
+                <div class="glass-card p-5 capa-stat">
+                    <p class="text-4xl font-black primary-color">3</p>
+                    <p class="text-softer text-sm mt-1">fontes públicas</p>
+                </div>
+            </div>
+            <div class="flex items-center justify-center gap-3 text-softer text-sm">
+                <i data-lucide="users" class="w-4 h-4 primary-color"></i> Romano e Valdecir
+                <span class="opacity-40">|</span>
+                <i data-lucide="calendar" class="w-4 h-4 primary-color"></i> 03/11/2026
+            </div>
+            <img src="logo.png" alt="Escola de Governo, Município de Toledo-PR" class="h-16 mx-auto mt-10 opacity-90">
+        </div>
+        <style>
+            .capa-stat { animation: capa-stat-glow 6s ease-in-out infinite; }
+            .capa-stat:nth-child(2) { animation-delay: 1.5s; }
+            .capa-stat:nth-child(3) { animation-delay: 3s; }
+            .capa-stat:nth-child(4) { animation-delay: 4.5s; }
+            @keyframes capa-stat-glow {
+                0%, 70%, 100% { border-color: var(--mira-card-border); box-shadow: 0 10px 30px var(--mira-glow-soft); }
+                15% { border-color: var(--mira-icon-border); box-shadow: 0 10px 40px var(--mira-glow-strong); }
+            }
+        </style>
+    </section>
+
+    <!-- ============ SLIDE 2: FLUXO DE TRABALHO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="route" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">A <span class="primary-color">pergunta</span> vem primeiro</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Quem começa pela informação se perde no caminho</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-02')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-02" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Pergunta</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Informação</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Preparação</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Análise</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Mapa</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Decisão</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 3: ENCADEAR OPERAÇÕES ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="link" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">O resultado de uma <span class="primary-color">alimenta</span> a próxima</h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Ferramenta sozinha não responde; o encadeamento responde</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-03')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-03" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Reprojetar para EPSG:31982</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Buffer de 500 m</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Diferença</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Área descoberta</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 4: MAPA DE CALOR ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="flame" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Mapa de calor: cuidado com o <span class="primary-color">raio</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Mesmos pontos, raio diferente, conclusão diferente</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-04')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-04" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Ajuda: mostrar onde concentra</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Engana: raio grande inventa mancha</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Sempre informe o raio</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 5: DADO PÚBLICO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="database" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Antes de criar, <span class="primary-color">procure</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">Muita informação de Toledo já existe, é pública e gratuita</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-05')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-05" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">IBGE: setores censitários, população</span>
+            <span class="attribute-pill px-5 py-2 text-sm">INDE: catálogo nacional, WMS e WFS</span>
+            <span class="attribute-pill px-5 py-2 text-sm">DATASUS: saúde por município</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 6: LGPD ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+        <div class="text-center mb-8" data-aos="fade-up">
+            <div class="slide-title-row justify-center flex items-center gap-4">
+                <div class="icon-hero"><i data-lucide="shield-check" class="primary-color w-6 h-6"></i></div>
+                <h2 class="text-4xl md:text-5xl font-black">Ponto de pessoa é <span class="primary-color">informação pessoal</span></h2>
+            </div>
+            <p class="text-soft text-lg mt-3">LGPD: agregue por território antes de divulgar</p>
+        </div>
+        <div class="glass-card w-full max-w-5xl p-4 md:p-6 relative" data-aos="fade-up">
+            <button class="replay-btn" onclick="window.miraReplay('st-06')">↻ replay</button>
+            <div class="anim-stage" style="height: clamp(320px, 50vh, 480px);"><svg id="st-06" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3 mt-8" data-aos="fade-up">
+            <span class="attribute-pill px-5 py-2 text-sm">Nunca: ponto individual identificável</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Sempre: contagem por bairro ou setor</span>
+            <span class="attribute-pill px-5 py-2 text-sm">Junção espacial faz a agregação</span>
+        </div>
+    </section>
+
+    <!-- ============ SLIDE 7: ENCERRAMENTO ============ -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-6 py-16">
+        <div class="relative z-10 text-center max-w-4xl" data-aos="zoom-in">
+            <div class="icon-hero mx-auto mb-8" style="width:72px;height:72px;border-radius:20px;">
+                <i data-lucide="quote" class="primary-color w-9 h-9"></i>
+            </div>
+            <h2 class="text-5xl md:text-6xl font-black mb-8">Agora, na prática</h2>
+            <blockquote class="text-2xl md:text-3xl text-soft leading-snug mb-12">
+                "Todo mapa responde a uma <span class="primary-color font-bold">pergunta</span>. Se você não sabe qual, ele não responde a nenhuma."
+            </blockquote>
+            <div class="flex flex-wrap items-center justify-center gap-3 mb-10">
+                <span class="attribute-pill check-pill px-5 py-2">Pergunta primeiro</span>
+                <span class="attribute-pill check-pill px-5 py-2">Uma alimenta a outra</span>
+                <span class="attribute-pill check-pill px-5 py-2">Informe o raio</span>
+                <span class="attribute-pill check-pill px-5 py-2">Agregue antes de publicar</span>
+            </div>
+            <img src="logo.png" alt="Escola de Governo, Município de Toledo-PR" class="h-14 mx-auto opacity-90">
+        </div>
+        <style>
+            .check-pill { animation: check-on 8s ease-in-out infinite; }
+            .check-pill:nth-child(2) { animation-delay: 2s; }
+            .check-pill:nth-child(3) { animation-delay: 4s; }
+            .check-pill:nth-child(4) { animation-delay: 6s; }
+            @keyframes check-on { 0%, 25%, 100% { color: var(--mira-text-soft); border-color: var(--mira-pill-border); } 8% { color: var(--mira-primary); border-color: var(--mira-icon-border); background: var(--mira-icon-bg); } }
+        </style>
+    </section>
+
+    <script>
+        AOS.init({ duration: 800, once: true });
+        lucide.createIcons();
+
+(function () {
+    'use strict';
+
+    function cor(nome, reserva) {
+        var v = getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+        return v || reserva;
+    }
+    var COR = {
+        marca: cor('--mira-primary', '#FF904D'),
+        acento: cor('--mira-accent-2', '#FFC766'),
+        tinta: cor('--mira-text', '#ffffff'),
+        fundo: cor('--mira-bg', '#000000'),
+        erro: cor('--mira-error', '#FF6464'),
+        ok: cor('--mira-crop', '#35D07F')
+    };
+
+    /* ---------- regente ---------- */
+    function reger(svgId, quadro) {
+        var svg = document.getElementById(svgId);
+        var slide = svg && svg.closest('section');
+        if (!slide || typeof IntersectionObserver !== 'function') {
+            d3.timer(function (ms) { quadro(ms); });
+            return;
+        }
+        var relogio = null, visivel = false, ultimoZero = false;
+        window.__miraReplay = window.__miraReplay || {};
+        window.__miraReplay[svgId] = function () { relogio = null; };   // botão replay: recomeça do zero
+        d3.timer(function (ms) {
+            if (!visivel) {
+                /* fora da tela: desenha o quadro zero UMA vez e para de gastar */
+                if (!ultimoZero) { quadro(0); ultimoZero = true; }
+                return;
+            }
+            ultimoZero = false;
+            if (relogio === null) relogio = ms;
+            quadro(ms - relogio);
+        });
+        new IntersectionObserver(function (entradas) {
+            entradas.forEach(function (e) {
+                if (e.isIntersecting === visivel) return;
+                visivel = e.isIntersecting;
+                relogio = null;
+                ultimoZero = false;
+            });
+        }, { threshold: 0.4 }).observe(slide);
+    }
+
+    /* ---------- palco: o quadro inteiro, menos a faixa do título ---------- */
+    function palco(svgId) {
+        var svg = d3.select('#' + svgId);
+        if (svg.empty()) return null;
+        var caixa = svg.node().closest('.anim-stage');
+        var secao = caixa && caixa.closest ? caixa.closest('section') : null;
+        var titulo = secao && secao.querySelector
+            ? secao.querySelector('.slide-main h2, .slide-main h1')
+            : null;
+        var sub = secao && secao.querySelector ? secao.querySelector('.slide-main p.sub') : null;
+        var RESPIRO = 18;
+        var F = { W: 960, H: 460, topo: 0, alturaUtil: 460 };
+        F.vy = function (k) { return F.topo + F.alturaUtil * k; };
+
+        function casar() {
+            var r = caixa.getBoundingClientRect();
+            if (r.width > 0 && r.height > 0) F.H = Math.round(F.W * r.height / r.width);
+            svg.attr('viewBox', '0 0 ' + F.W + ' ' + F.H);
+            F.topo = 0;
+            if (titulo && titulo.getBoundingClientRect && r.height > 0) {
+                var t = titulo.getBoundingClientRect();
+                var basePx = Math.max(0, (t.bottom || 0) - (r.top || 0));
+                if (sub) {
+                    var s2 = sub.getBoundingClientRect();
+                    basePx = Math.max(basePx, (s2.bottom || 0) - (r.top || 0));
+                }
+                F.topo = Math.round(F.H * basePx / r.height) + RESPIRO;
+                F.topo = Math.min(F.topo, Math.round(F.H * 0.40));
+            }
+            F.alturaUtil = F.H - F.topo;
+        }
+        casar();
+        window.addEventListener('resize', casar);
+        window.addEventListener('load', casar);
+        svg.selectAll('*').remove();
+        return { svg: svg, F: F };
+    }
+
+    /* ---------- utilidades ---------- */
+    function seg(t, a, b) { return t <= a ? 0 : t >= b ? 1 : (t - a) / (b - a); }
+    var eio = d3.easeSinInOut;
+    function mix(a, b, k) { return a + (b - a) * k; }
+    function texto(pai, tam, peso, fill) {
+        return pai.append('text').attr('text-anchor', 'middle')
+            .attr('font-size', tam).attr('font-weight', peso).attr('fill', fill)
+            .attr('font-family', 'Inter, sans-serif');
+    }
+    function geo(F, kR, ky) {
+        return { cx: F.W / 2, cy: F.vy(ky), R: Math.min(F.alturaUtil * kR, F.W * .16) };
+    }
+
+
+    /* ---------- utilidades da aula 09 ---------- */
+    function ciclo(t, ini, per) { if (t < ini) return -1; var c = (t - ini) / per; return c - Math.floor(c); }
+    function onda(t, per) { return .5 - .5 * Math.cos(2 * Math.PI * t / per); }
+    function plato(s, a, b, r) { r = r || .5; return Math.min(seg(s, a, a + r), 1 - seg(s, b - r, b)); }
+    function milhar(n) { return n >= 1000 ? Math.floor(n / 1000) + '.' + String(n % 1000).padStart(3, '0') : String(n); }
+
+    /* ---------- 2: o pulso percorre as seis etapas, sempre saindo da pergunta ---------- */
+    function animFluxo(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var nomes = ['Pergunta', 'Informação', 'Preparação', 'Análise', 'Mapa', 'Decisão'];
+        var trilho = g.append('line').attr('stroke', COR.tinta).attr('stroke-opacity', .2).attr('stroke-width', 4);
+        var feito = g.append('line').attr('stroke', COR.marca).attr('stroke-width', 4).attr('stroke-linecap', 'round');
+        var nos = nomes.map(function (n, i) {
+            var q = g.append('g');
+            return {
+                g: q,
+                anel: q.append('circle').attr('fill', 'none').attr('stroke', COR.marca).attr('stroke-width', 3),
+                disco: q.append('circle').attr('stroke-width', 3),
+                num: texto(q, 26, 900, COR.tinta).text(i + 1),
+                nome: texto(q, 22, 700, COR.tinta).text(n)
+            };
+        });
+        var bola = g.append('circle').attr('fill', COR.acento);
+        var nota = texto(g, 24, 600, COR.tinta);
+        reger(id, function (ms) {
+            var t = ms / 1000, y = F.vy(.42), x0 = F.W * .09, dx = F.W * .164, R = Math.min(dx * .3, F.alturaUtil * .11);
+            var s = ciclo(t, 2.6, 6), pos = s < 0 ? 0 : eio(seg(s, 0, .75)) * 5;
+            trilho.attr('x1', x0).attr('x2', x0 + 5 * dx).attr('y1', y).attr('y2', y).attr('opacity', eio(seg(t, 0, .6)));
+            feito.attr('x1', x0).attr('y1', y).attr('y2', y).attr('x2', x0 + pos * dx).attr('opacity', s < 0 ? 0 : 1 - seg(s, .9, 1));
+            nos.forEach(function (n, i) {
+                var e = eio(seg(t, .3 + i * .35, .9 + i * .35)), aceso = s >= 0 && s < .95 && pos >= i - .01;
+                var forte = aceso || i === 0, o = i === 0 ? ciclo(t, 0, 1.8) : 0;
+                n.g.attr('transform', 'translate(' + (x0 + i * dx) + ',' + y + ') scale(' + e + ')');
+                n.disco.attr('r', R).attr('fill', aceso ? COR.marca : COR.fundo).attr('fill-opacity', aceso ? .25 : 1)
+                    .attr('stroke', forte ? COR.marca : COR.tinta).attr('stroke-opacity', forte ? 1 : .35);
+                n.num.attr('y', 9).attr('fill', forte ? COR.marca : COR.tinta);
+                n.nome.attr('y', R + 38).attr('opacity', forte ? 1 : .6);
+                n.anel.attr('r', R * (1 + .5 * o)).attr('opacity', i === 0 ? (1 - o) * e : 0);
+            });
+            bola.attr('cx', x0 + pos * dx).attr('cy', y).attr('r', s < 0 ? 0 : R * .22).attr('opacity', s < 0 ? 0 : 1 - seg(s, .85, .95));
+            nota.attr('x', F.W / 2).attr('y', F.vy(.86)).attr('opacity', .75 * eio(seg(t, 2.2, 2.8)))
+                .text('sem pergunta, a informação não tem por onde começar');
+        });
+    }
+
+    /* ---------- 3: a ficha da camada atravessa três ferramentas e muda a cada uma ---------- */
+    function animEncadear(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var etapas = ['Reprojetar', 'Buffer 500 m', 'Diferença'];
+        var estados = ['escolas · EPSG:4674', 'escolas · EPSG:31982', 'cobertura de 500 m', 'área descoberta'];
+        var trilho = g.append('line').attr('stroke', COR.tinta).attr('stroke-width', 3).attr('stroke-dasharray', '6 8');
+        var caixas = etapas.map(function (n) {
+            var q = g.append('g');
+            return { g: q, r: q.append('rect').attr('rx', 16).attr('stroke-width', 3), t: texto(q, 24, 800, COR.tinta).text(n) };
+        });
+        var ficha = g.append('g');
+        var fr = ficha.append('rect').attr('rx', 22).attr('stroke-width', 2);
+        var ft = texto(ficha, 20, 700, COR.tinta);
+        var rot = texto(g, 22, 600, COR.tinta);
+        reger(id, function (ms) {
+            var t = ms / 1000, y = F.vy(.36), bw = F.W * .17, bh = Math.min(F.alturaUtil * .2, 80), yf = y + bh / 2 + 70;
+            var xs = [.27, .5, .73].map(function (k) { return F.W * k; }), xa = F.W * .14, xb = F.W * .86;
+            var s = ciclo(t, 1.6, 7), xf = mix(xa, xb, s < 0 ? 0 : eio(seg(s, 0, .8)));
+            var n = 0;
+            xs.forEach(function (x) { if (s >= 0 && xf > x) n++; });
+            trilho.attr('x1', xa).attr('x2', xb).attr('y1', yf).attr('y2', yf).attr('stroke-opacity', .25 * eio(seg(t, 0, .6)));
+            caixas.forEach(function (c, i) {
+                var e = eio(seg(t, .2 + i * .3, .8 + i * .3)), dentro = s >= 0 && Math.abs(xf - xs[i]) < bw / 2;
+                c.g.attr('transform', 'translate(' + xs[i] + ',' + y + ') scale(' + e + ')');
+                c.r.attr('x', -bw / 2).attr('y', -bh / 2).attr('width', bw).attr('height', bh)
+                    .attr('fill', dentro ? COR.marca : COR.fundo).attr('fill-opacity', dentro ? .25 : 1)
+                    .attr('stroke', dentro ? COR.marca : COR.tinta).attr('stroke-opacity', dentro ? 1 : .4);
+                c.t.attr('y', 8);
+            });
+            var fw = F.W * .26, fim = n === 3;
+            ficha.attr('transform', 'translate(' + xf + ',' + yf + ')').attr('opacity', s < 0 ? 0 : 1 - seg(s, .9, 1));
+            fr.attr('x', -fw / 2).attr('y', -22).attr('width', fw).attr('height', 44)
+                .attr('fill', fim ? COR.marca : COR.fundo).attr('fill-opacity', fim ? .2 : 1).attr('stroke', fim ? COR.marca : COR.acento);
+            ft.attr('y', 7).attr('fill', fim ? COR.marca : COR.tinta).text(estados[n]);
+            rot.attr('x', F.W / 2).attr('y', F.vy(.92)).attr('opacity', .7 * eio(seg(t, 1, 1.6)))
+                .text('cada etapa trabalha sobre o resultado da anterior');
+        });
+    }
+
+    /* ---------- 4: o raio do mapa de calor cresce e as duas concentrações viram uma mancha só ---------- */
+    function animCalor(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var gr = p.svg.append('defs').append('radialGradient').attr('id', 'calor-' + id);
+        gr.append('stop').attr('offset', '0%').attr('stop-color', COR.marca).attr('stop-opacity', .55);
+        gr.append('stop').attr('offset', '100%').attr('stop-color', COR.marca).attr('stop-opacity', 0);
+        var lcg = d3.randomLcg(42), nrm = d3.randomNormal.source(lcg), pts = [], i;
+        var ax = nrm(.3, .05), ay = nrm(.4, .08), bx = nrm(.7, .05), by = nrm(.58, .08);
+        for (i = 0; i < 22; i++) pts.push({ x: ax(), y: ay() });
+        for (i = 0; i < 22; i++) pts.push({ x: bx(), y: by() });
+        for (i = 0; i < 10; i++) pts.push({ x: lcg(), y: lcg() });
+        pts.forEach(function (d) { d.x = Math.max(0, Math.min(1, d.x)); d.y = Math.max(0, Math.min(1, d.y)); });
+        var cm = g.append('g').selectAll('circle').data(pts).enter().append('circle').attr('fill', 'url(#calor-' + id + ')');
+        var cp = g.append('g').selectAll('circle').data(pts).enter().append('circle').attr('fill', COR.tinta).attr('r', 3.5);
+        var placa = texto(g, 26, 800, COR.marca), veredito = texto(g, 22, 700, COR.tinta);
+        reger(id, function (ms) {
+            var t = ms / 1000, o = t < 1.8 ? 0 : onda(t - 1.8, 9);
+            var r = mix(F.W * .03, F.W * .17, o) * eio(seg(t, 1.2, 1.8));
+            function px(d) { return F.W * (.08 + .84 * d.x); }
+            function py(d) { return F.vy(.04 + .76 * d.y); }
+            cm.attr('cx', px).attr('cy', py).attr('r', r);
+            cp.attr('cx', px).attr('cy', py).attr('opacity', function (d, k) { return .8 * seg(t, .015 * k, .015 * k + .3); });
+            var vis = eio(seg(t, 1.6, 2.2));
+            placa.attr('x', F.W * .28).attr('y', F.vy(.94)).attr('opacity', vis)
+                .text('raio: ' + milhar(Math.round(mix(100, 1500, o) / 50) * 50) + ' m');
+            veredito.attr('x', F.W * .68).attr('y', F.vy(.94)).attr('opacity', vis)
+                .attr('fill', o > .65 ? COR.erro : o < .35 ? COR.ok : COR.tinta)
+                .text(o < .35 ? 'duas concentrações reais' : o > .65 ? 'uma mancha só: engana' : 'as manchas se fundem…');
+        });
+    }
+
+    /* ---------- 5: pacotes de informação saem das três fontes e chegam no projeto QGIS ---------- */
+    function animFontes(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var fontes = [['IBGE', 'setores censitários'], ['INDE', 'catálogo e serviços'], ['DATASUS', 'saúde por município']];
+        var cartoes = fontes.map(function (f) {
+            var q = g.append('g');
+            return {
+                g: q, fio: g.insert('path', ':first-child').attr('fill', 'none').attr('stroke', COR.tinta).attr('stroke-width', 2).attr('stroke-dasharray', '5 7'),
+                r: q.append('rect').attr('rx', 14).attr('fill', COR.fundo).attr('stroke', COR.tinta).attr('stroke-opacity', .4).attr('stroke-width', 2),
+                nome: texto(q, 28, 900, COR.marca).text(f[0]), sub: texto(q, 16, 500, COR.tinta).attr('opacity', .7).text(f[1]),
+                pacote: g.append('rect').attr('rx', 3).attr('fill', COR.acento)
+            };
+        });
+        var qg = g.append('g');
+        var qr = qg.append('rect').attr('rx', 16).attr('fill', COR.fundo).attr('stroke', COR.marca).attr('stroke-width', 3);
+        var camadas = [0, 1, 2].map(function () { return qg.append('rect').attr('rx', 6).attr('fill', COR.marca); });
+        var qt = texto(qg, 20, 700, COR.tinta);
+        reger(id, function (ms) {
+            var t = ms / 1000, cw = F.W * .22, ch = Math.min(F.alturaUtil * .18, 74), cx = F.W * .2;
+            var qx = F.W * .76, qy = F.vy(.45), qw = F.W * .22, qh = F.alturaUtil * .56, lh = qh * .13;
+            var eq = eio(seg(t, .9, 1.5));
+            qg.attr('transform', 'translate(' + qx + ',' + qy + ') scale(' + eq + ')');
+            qr.attr('x', -qw / 2).attr('y', -qh / 2).attr('width', qw).attr('height', qh);
+            qt.attr('y', qh / 2 - 22).text('seu projeto QGIS');
+            cartoes.forEach(function (c, i) {
+                var cy = F.vy(.15 + i * .3), e = eio(seg(t, .2 + i * .25, .8 + i * .25));
+                var ly = -qh / 2 + 30 + i * (lh + 18), ax = cx + cw / 2, bx = qx - qw * .32;
+                c.g.attr('transform', 'translate(' + mix(cx - 60, cx, e) + ',' + cy + ')').attr('opacity', e);
+                c.r.attr('x', -cw / 2).attr('y', -ch / 2).attr('width', cw).attr('height', ch);
+                c.nome.attr('y', -2); c.sub.attr('y', 22);
+                c.fio.attr('d', 'M' + ax + ',' + cy + ' C' + (ax + 140) + ',' + cy + ' ' + (bx - 140) + ',' + (qy + ly + lh / 2) + ' ' + bx + ',' + (qy + ly + lh / 2))
+                    .attr('stroke-opacity', .25 * eq);
+                var k = ciclo(t, 1.6 + i, 3), viaja = k >= 0 && k < .7, flash = k >= .7 ? 1 - seg(k, .7, 1) : 0;
+                if (viaja) {
+                    var no = c.fio.node(), pt = no.getPointAtLength(no.getTotalLength() * eio(k / .7));
+                    c.pacote.attr('x', pt.x - 9).attr('y', pt.y - 9).attr('width', 18).attr('height', 18).attr('opacity', 1);
+                } else c.pacote.attr('opacity', 0);
+                camadas[i].attr('x', -qw * .32).attr('y', ly).attr('width', qw * .64).attr('height', lh)
+                    .attr('fill-opacity', t < 1.6 ? .15 : .25 + .6 * flash);
+            });
+        });
+    }
+
+    /* ---------- 6: pontos de pessoas se recolhem e viram contagem por bairro ---------- */
+    function animLgpd(id) {
+        var p = palco(id); if (!p) return;
+        var F = p.F, g = p.svg.append('g');
+        var contagem = [9, 3, 6, 2, 7, 4], lcg = d3.randomLcg(7), pts = [];
+        contagem.forEach(function (n, c) { for (var i = 0; i < n; i++) pts.push({ c: c, u: .15 + .7 * lcg(), v: .15 + .7 * lcg() }); });
+        var celulas = g.append('g').selectAll('rect').data(contagem).enter().append('rect').attr('rx', 10)
+            .attr('stroke', COR.tinta).attr('stroke-opacity', .3).attr('stroke-width', 2).attr('fill', COR.marca);
+        var numeros = g.append('g').selectAll('text').data(contagem).enter().append('text').attr('text-anchor', 'middle')
+            .attr('font-size', 44).attr('font-weight', 900).attr('fill', COR.marca).attr('font-family', 'Inter, sans-serif')
+            .text(function (d) { return d; });
+        var bolas = g.append('g').selectAll('circle').data(pts).enter().append('circle').attr('r', 6).attr('fill', COR.erro);
+        var selo = texto(g, 24, 800, COR.tinta);
+        reger(id, function (ms) {
+            var t = ms / 1000, x0 = F.W * .12, x1 = F.W * .88, y0 = F.vy(.16), y1 = F.vy(.96), gap = 14;
+            var cw = (x1 - x0 - 2 * gap) / 3, ch = (y1 - y0 - gap) / 2;
+            function cel(c) { return { x: x0 + (c % 3) * (cw + gap), y: y0 + Math.floor(c / 3) * (ch + gap) }; }
+            var s = ciclo(t, 1.4, 9), agg = s < 0 ? 0 : plato(s * 9, 3.5, 8.6, .9);
+            celulas.attr('x', function (d, c) { return cel(c).x; }).attr('y', function (d, c) { return cel(c).y; })
+                .attr('width', cw).attr('height', ch).attr('opacity', eio(seg(t, 0, 1)))
+                .attr('fill-opacity', function (d) { return agg * d / 9 * .5; });
+            numeros.attr('x', function (d, c) { return cel(c).x + cw / 2; }).attr('y', function (d, c) { return cel(c).y + ch / 2 + 15; })
+                .attr('opacity', agg);
+            bolas.attr('cx', function (d) { return cel(d.c).x + cw * mix(d.u, .5, agg); })
+                .attr('cy', function (d) { return cel(d.c).y + ch * mix(d.v, .5, agg); })
+                .attr('opacity', function (d, k) { return seg(t, .5 + .02 * k, .8 + .02 * k) * (1 - agg); });
+            selo.attr('x', F.W / 2).attr('y', F.vy(.07)).attr('opacity', eio(seg(t, 1, 1.4)))
+                .attr('fill', agg < .5 ? COR.erro : COR.ok)
+                .text(agg < .5 ? '✗ cada ponto é uma pessoa: não publique' : '✓ contagem por bairro: pode publicar');
+        });
+    }
+
+    window.miraReplay = function (id) { var f = window.__miraReplay && window.__miraReplay[id]; if (f) f(); };
+
+    function ligar() {
+        animFluxo('st-02');
+        animEncadear('st-03');
+        animCalor('st-04');
+        animFontes('st-05');
+        animLgpd('st-06');
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ligar);
+    else ligar();
+})();
+
+
+        // === CONTROLES DE SLIDE: navegação card-a-card (progresso + botão + teclado) ===
+        (function () {
+            const cardSections = Array.from(document.querySelectorAll('body > section'));
+            if (cardSections.length === 0) return;
+
+            const progress = document.getElementById('mira-progress');
+            const nextBtn = document.getElementById('mira-next');
+            const nextIcon = document.getElementById('mira-next-icon');
+
+            const atBottom = () =>
+                (window.scrollY + window.innerHeight) >= (document.documentElement.scrollHeight - 100);
+
+            function currentIndex() {
+                const y = window.scrollY + window.innerHeight * 0.3;
+                let idx = -1;
+                for (let i = 0; i < cardSections.length; i++) {
+                    if (cardSections[i].offsetTop <= y) idx = i;
+                }
+                return idx;
+            }
+
+            function goTo(i) {
+                const idx = Math.max(0, Math.min(cardSections.length - 1, i));
+                cardSections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            window.addEventListener('scroll', () => {
+                const docH = document.documentElement.scrollHeight - window.innerHeight;
+                progress.style.width = (docH > 0 ? (window.scrollY / docH) * 100 : 0) + '%';
+                nextBtn.classList.toggle('visible', window.scrollY > 300);
+                nextIcon.setAttribute('data-lucide', atBottom() ? 'chevron-up' : 'chevron-down');
+                lucide.createIcons();
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (atBottom()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+                goTo(currentIndex() + 1);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key)) {
+                    e.preventDefault();
+                    goTo(currentIndex() + 1);
+                } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+                    e.preventDefault();
+                    const idx = currentIndex();
+                    if (idx <= 0) window.scrollTo({ top: 0, behavior: 'smooth' });
+                    else goTo(idx - 1);
+                } else if (e.key === 'Home') {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (e.key === 'End') {
+                    e.preventDefault();
+                    goTo(cardSections.length - 1);
+                } else if (e.key.toLowerCase() === 'f') {
+                    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                    else document.exitFullscreen();
+                }
+            });
+        })();
+    </script>
+
+    <!-- Modo edição (reordenar slides): tecla E ou ?edit=1 -->
+    <script src="mira/mira-edit.js" defer></script>
+    <!-- Edição livre estilo Canva (mover/redimensionar/rotacionar/duplicar/excluir/texto): tecla E -->
+    <script src="mira/mira-edit-free.js" defer></script>
+    <!-- mira-draw (desenhar sobre o slide): tecla P ou ?draw=1 -->
+    <script src="mira/mira-draw.js" defer></script>
+</body>
+
+</html>
